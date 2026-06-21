@@ -1,0 +1,8 @@
+# Copy once for local dev. Do NOT re-run `cp .dev.vars.example .dev.vars` after adding secrets — it wipes your keys.
+NEXTJS_ENV=development
+R2_PUBLIC_BASE_URL=http://localhost:3000/media
+UPLOAD_SIGNING_SECRET=local-dev-upload-secret
+SESSION_SIGNING_SECRET=local-dev-session-secret
+ALLOW_DEV_AUTH=true
+GOOGLE_CLIENT_ID=
+GEMINI_API_KEY=

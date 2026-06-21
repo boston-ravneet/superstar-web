@@ -2,11 +2,12 @@
   "name": "superstar-web",
   "version": "0.1.0",
   "private": true,
- "scripts": {
-  "dev": "next dev",
-  "build": "next build",
-  "start": "next start"
-},
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
   "dependencies": {
     "next": "16.2.9",
     "react": "19.2.4",
@@ -16,6 +17,7 @@
     "esbuild": "0.28.1"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260621.1",
     "@opennextjs/cloudflare": "^1.19.11",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",

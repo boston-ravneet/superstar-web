@@ -43,6 +43,10 @@ next-env.d.ts
 # OpenNext
 .open-next
 
+# Expo mobile app (separate package under mobile/)
+/mobile/node_modules
+/mobile/.expo
+
 # wrangler files
 .wrangler
 .dev.vars*

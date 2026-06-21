@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "Superstar Mobile",
+    "slug": "superstar-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "superstar",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#050505"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "info.getsuperstar.mobile",
+      "usesAppleSignIn": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#050505"
+      },
+      "package": "info.getsuperstar.mobile"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Superstar to access your photos for profile customization."
+        }
+      ],
+      "expo-asset",
+      "expo-font",
+      "expo-web-browser",
+      "expo-secure-store",
+      "expo-apple-authentication"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
