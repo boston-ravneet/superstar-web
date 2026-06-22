@@ -1,0 +1,35 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://getsuperstar.info",
+        "EXPO_PUBLIC_WEB_URL": "https://getsuperstar.info",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "753240227728-o7e8dtqeg2otvh992h2dqpqecfrokhe4.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "753240227728-dtk5magac6psgtmve5ui9nbhqqnerbi7.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "753240227728-gapm38qpu4a4hudt8kghdvtacfemld6i.apps.googleusercontent.com"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://getsuperstar.info",
+        "EXPO_PUBLIC_WEB_URL": "https://getsuperstar.info",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "753240227728-o7e8dtqeg2otvh992h2dqpqecfrokhe4.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "753240227728-dtk5magac6psgtmve5ui9nbhqqnerbi7.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "753240227728-gapm38qpu4a4hudt8kghdvtacfemld6i.apps.googleusercontent.com"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

@@ -1,6 +1,5 @@
 import type { ProfileBuilderInput, StageTemplateDocument } from "@/lib/types/stage-template";
 import {
-  buildFallbackStageTemplate,
   parseStageTemplate,
 } from "@/lib/stage/parse-stage-template";
 import {
@@ -10,6 +9,11 @@ import {
 import { finalizeStageTemplate } from "@/lib/stage/enrich-stage-template";
 import { logStageGeneration } from "@/lib/ai/stage-generation-log";
 import { fetchImagePartsForGemini } from "@/lib/ai/fetch-image-parts";
+import { classifyCreator } from "@/lib/ai/classify-creator";
+import { buildFromArchetype } from "@/lib/stage/fill-archetype";
+import type { CreatorClassification } from "@/lib/stage/archetypes";
+
+const GEMINI_MODEL = "gemini-2.5-flash";
 
 const STAGE_TEMPLATE_SCHEMA = `{
   "version": 2,
@@ -49,6 +53,8 @@ function buildPrompt(
     refinePrompt?: string;
     currentTemplate?: StageTemplateDocument;
     hasVision?: boolean;
+    classification?: CreatorClassification;
+    archetypeStarter?: StageTemplateDocument;
   },
 ): string {
   const images = input.imageUrls
@@ -75,7 +81,9 @@ function buildPrompt(
 
   const currentTemplateBlock = options?.currentTemplate
     ? `\n## CURRENT TEMPLATE\nModify this JSON per the tweak request. Keep image URLs unless asked to change:\n${JSON.stringify(options.currentTemplate, null, 2)}\n`
-    : "";
+    : options?.archetypeStarter
+      ? `\n## START FROM THIS CURATED ARCHETYPE\nYou MUST keep the same section types, order, and overall structure. Personalize copy, palette accents, gallery title, and skill tags — do not remove sections.\nArchetype: ${options.classification?.archetypeName ?? "curated preset"}\nVertical: ${options.classification?.vertical ?? "general"}\nMood: ${options.classification?.mood ?? "bright"}\n\n${JSON.stringify(options.archetypeStarter, null, 2)}\n`
+      : "";
 
   const visionBlock = options?.hasVision
     ? `\n## PHOTOS ATTACHED\nYou can SEE photo_1, photo_2, photo_3 as images above. Study them: subjects, setting, colors, mood, sports/tech cues. Let what you see drive gallery title, palette accents, and layout feel.\n`
@@ -84,6 +92,7 @@ function buildPrompt(
   return `You are an elite mobile web designer building a creator portfolio page ("stage") for Superstar.
 
 Your output must feel like a polished, intentional one-page site — not a generic template.
+You are personalizing a curated design archetype, not inventing layout from scratch.
 
 ## CREATOR INPUT
 
@@ -112,7 +121,7 @@ ${designBlock}${visionBlock}${currentTemplateBlock}
    - If brief says "not pink" / "no pink" → zero pink anywhere: not in palette.primary, not in hero gradient, not in CTA.
    - Sports + bright → light blue/sky background (#f0f9ff), green or blue accents.
 
-5. **Structure sections** — Include: hero → social (if links) → gallery (all 3 photo URLs) → bio → skills (3–6 tags from bio interests) → cta.
+5. **Structure sections** — Keep the archetype's section order and types. Include: hero → social (if links) → gallery (all 3 photo URLs) → bio → skills (3–6 tags from bio interests) → cta.
 
 6. **Images** — Use exact photo URLs provided. Hero \`avatarUrl\` = photo_1.
    - Circular/round request: \`assets.avatarBorderRadius\` and \`assets.galleryImageBorderRadius\` = "50%", all gallery \`span\` = 1, omit \`caption\` on gallery images (no "Photo 2" labels).
@@ -127,20 +136,63 @@ ${STAGE_TEMPLATE_SCHEMA}
 ${refineBlock}`;
 }
 
+function parseGeminiError(status: number, rawBody: string): string {
+  try {
+    const payload = JSON.parse(rawBody) as {
+      error?: { message?: string; status?: string; code?: number };
+    };
+    const message = payload.error?.message?.trim();
+    if (!message) {
+      return `Gemini HTTP ${status}`;
+    }
+
+    if (/API key not valid|invalid.*api key/i.test(message)) {
+      return (
+        "Gemini API key rejected. Create a key at https://aistudio.google.com/apikey " +
+        "(AIza… or AQ. format both work). Check GEMINI_API_KEY in .dev.vars — " +
+        "do not run cp .dev.vars.example .dev.vars."
+      );
+    }
+
+    if (status === 429 || /quota|RESOURCE_EXHAUSTED/i.test(message)) {
+      return (
+        "Gemini quota exceeded on the free tier. Wait a minute and retry, " +
+        "or enable billing in Google AI Studio / Cloud Console for your project."
+      );
+    }
+
+    if (status === 404 || /no longer available|not found for API/i.test(message)) {
+      return `Gemini model unavailable (${GEMINI_MODEL}). ${message.slice(0, 120)}`;
+    }
+
+    return `Gemini HTTP ${status}: ${message.slice(0, 200)}`;
+  } catch {
+    return `Gemini HTTP ${status}: ${rawBody.slice(0, 200)}`;
+  }
+}
+
 async function callGemini(apiKey: string, parts: GeminiPart[]): Promise<string> {
   const promptText = parts.find((part): part is { text: string } => "text" in part)?.text ?? "";
 
   logStageGeneration("llm_request", {
-    model: "gemini-2.0-flash",
+    model: GEMINI_MODEL,
     prompt: promptText,
     imageParts: parts.filter((part) => "inline_data" in part).length,
+    keyFormat: apiKey.startsWith("AQ.")
+      ? "auth"
+      : apiKey.startsWith("AIza")
+        ? "standard"
+        : "unknown",
   });
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
       body: JSON.stringify({
         contents: [{ parts }],
         generationConfig: {
@@ -154,11 +206,13 @@ async function callGemini(apiKey: string, parts: GeminiPart[]): Promise<string> 
   const rawBody = await response.text();
 
   if (!response.ok) {
+    const friendly = parseGeminiError(response.status, rawBody);
     logStageGeneration("llm_error", {
       status: response.status,
       body: rawBody,
+      friendly,
     });
-    throw new Error(`Gemini HTTP ${response.status}: ${rawBody.slice(0, 240)}`);
+    throw new Error(friendly);
   }
 
   const payload = JSON.parse(rawBody) as {
@@ -202,18 +256,35 @@ export async function generateStageTemplate(
 ): Promise<GenerationResult> {
   const apiKey = options?.apiKey?.trim();
   const hints = combineDesignHints(input.designInstructions, options?.refinePrompt);
+  const classification = classifyCreator(input);
+  const archetypeStarter = buildFromArchetype(
+    input,
+    classification,
+    options?.refinePrompt,
+  );
+
+  logStageGeneration("archetype_selected", {
+    archetypeId: classification.archetypeId,
+    archetypeName: classification.archetypeName,
+    vertical: classification.vertical,
+    mood: classification.mood,
+    confidence: classification.confidence,
+    matchReasons: classification.matchReasons,
+  });
 
   if (!apiKey) {
     logStageGeneration("generation_fallback", {
       reason: "GEMINI_API_KEY is missing — add it to .dev.vars (not .dev.vars.example)",
+      archetypeId: classification.archetypeId,
     });
     const template = postProcessTemplate(
-      buildFallbackStageTemplate(input),
+      archetypeStarter,
       input,
       options?.refinePrompt,
     );
     logStageGeneration("generation_result", {
       source: "fallback",
+      archetypeId: classification.archetypeId,
       assets: template.assets,
       palette: template.palette,
       canvas: template.canvas,
@@ -232,6 +303,8 @@ export async function generateStageTemplate(
     refinePrompt: options?.refinePrompt ?? "",
     imageCount: input.imageUrls.length,
     hasApiKey: true,
+    archetypeId: classification.archetypeId,
+    archetypeName: classification.archetypeName,
   });
 
   try {
@@ -242,6 +315,8 @@ export async function generateStageTemplate(
       refinePrompt: options?.refinePrompt,
       currentTemplate: options?.currentTemplate,
       hasVision,
+      classification,
+      archetypeStarter: options?.currentTemplate ? undefined : archetypeStarter,
     });
 
     const parts: GeminiPart[] = [{ text: prompt }, ...imageParts];
@@ -253,9 +328,10 @@ export async function generateStageTemplate(
       logStageGeneration("generation_fallback", {
         reason: "Gemini JSON could not be parsed",
         rawResponse: rawJson,
+        archetypeId: classification.archetypeId,
       });
       const template = postProcessTemplate(
-        buildFallbackStageTemplate(input),
+        archetypeStarter,
         input,
         options?.refinePrompt,
       );
@@ -271,6 +347,8 @@ export async function generateStageTemplate(
     logStageGeneration("generation_success", {
       source: "gemini",
       visionImages: imageParts.length,
+      archetypeId: classification.archetypeId,
+      archetypeName: classification.archetypeName,
       assets: finalTemplate.assets,
       palette: finalTemplate.palette,
       canvas: finalTemplate.canvas,
@@ -287,7 +365,7 @@ export async function generateStageTemplate(
     logStageGeneration("generation_fallback", { reason: message });
 
     const template = postProcessTemplate(
-      buildFallbackStageTemplate(input),
+      archetypeStarter,
       input,
       options?.refinePrompt,
     );

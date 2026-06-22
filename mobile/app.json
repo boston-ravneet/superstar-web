@@ -3,6 +3,7 @@
     "name": "Superstar Mobile",
     "slug": "superstar-mobile",
     "version": "1.0.0",
+    "icon": "./assets/icon.png",
     "orientation": "portrait",
     "scheme": "superstar",
     "userInterfaceStyle": "dark",
@@ -14,13 +15,20 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "info.getsuperstar.mobile",
-      "usesAppleSignIn": true
+      "buildNumber": "1",
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#050505"
       },
-      "package": "info.getsuperstar.mobile"
+      "package": "info.getsuperstar.mobile",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "plugins": [
       "expo-router",
@@ -38,6 +46,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "2806f64e-1dc3-4187-b6f9-4efb32d900e2"
+      }
+    },
+    "owner": "boston_ravneet"
   }
 }

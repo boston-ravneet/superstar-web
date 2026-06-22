@@ -1,4 +1,6 @@
-# Copy once for local dev. Do NOT re-run `cp .dev.vars.example .dev.vars` after adding secrets — it wipes your keys.
+# Copy ONCE for local dev:
+#   npm run dev:init
+# Then add GEMINI_API_KEY below. Never run `cp .dev.vars.example .dev.vars` again — it wipes secrets.
 NEXTJS_ENV=development
 R2_PUBLIC_BASE_URL=http://localhost:3000/media
 UPLOAD_SIGNING_SECRET=local-dev-upload-secret

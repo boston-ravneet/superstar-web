@@ -1,0 +1,338 @@
+import type { StageArchetype } from "@/lib/stage/archetypes/types";
+import { DEFAULT_LAYOUT, DEFAULT_STYLE } from "@/lib/stage/template-defaults";
+
+const sharedSections = {
+  hero: (heroBg: string) => ({
+    id: "hero",
+    type: "hero" as const,
+    order: 0,
+    visible: true,
+    layout: { ...DEFAULT_LAYOUT, padding: "48px 24px 28px", gap: "14px" },
+    style: { ...DEFAULT_STYLE, background: heroBg },
+    content: {
+      headline: "",
+      handle: "",
+      subheadline: "",
+      avatarUrl: "",
+      showBadge: true,
+    },
+  }),
+  social: {
+    id: "social",
+    type: "social" as const,
+    order: 1,
+    visible: true,
+    layout: {
+      ...DEFAULT_LAYOUT,
+      direction: "row" as const,
+      gap: "12px",
+      padding: "0 24px 12px",
+    },
+    style: DEFAULT_STYLE,
+    content: { instagramHandle: null, tiktokHandle: null },
+  },
+  gallery: (title: string, columns: number, padding: string) => ({
+    id: "gallery",
+    type: "gallery" as const,
+    order: 2,
+    visible: true,
+    layout: {
+      ...DEFAULT_LAYOUT,
+      display: "grid" as const,
+      columns,
+      gap: "14px",
+      padding,
+    },
+    style: { ...DEFAULT_STYLE, borderRadius: "0" },
+    content: { title, images: [] as Array<{ url: string; span?: number }> },
+  }),
+  bio: (surface: string, border: string) => ({
+    id: "bio",
+    type: "bio" as const,
+    order: 3,
+    visible: true,
+    layout: { ...DEFAULT_LAYOUT, align: "start" as const, padding: "24px" },
+    style: {
+      ...DEFAULT_STYLE,
+      background: surface,
+      borderRadius: "20px",
+      borderColor: border,
+      borderWidth: "1px",
+    },
+    content: { title: "About", text: "" },
+  }),
+  skills: (title: string) => ({
+    id: "skills",
+    type: "skills" as const,
+    order: 4,
+    visible: true,
+    layout: {
+      ...DEFAULT_LAYOUT,
+      direction: "row" as const,
+      gap: "8px",
+      padding: "0 24px 20px",
+    },
+    style: DEFAULT_STYLE,
+    content: { title, tags: [] as string[] },
+  }),
+  cta: (bg: string, border: string, label: string) => ({
+    id: "cta",
+    type: "cta" as const,
+    order: 5,
+    visible: true,
+    layout: { ...DEFAULT_LAYOUT, padding: "8px 24px 48px" },
+    style: {
+      ...DEFAULT_STYLE,
+      background: bg,
+      borderRadius: "999px",
+      borderColor: border,
+      borderWidth: "1px",
+    },
+    content: { label, href: "" },
+  }),
+};
+
+export const STAGE_ARCHETYPES: StageArchetype[] = [
+  {
+    id: "field-day",
+    name: "Field Day",
+    description: "Bright athletic energy — sky blues, sport-ready layout, circular photos.",
+    matchKeywords:
+      /\b(football|soccer|sport|athletic|athlete|team|field|training|vcms|student|grade|mobile phone|bright|blue|navy|sky)\b/i,
+    galleryTitle: "In action",
+    skillsTitle: "Passions",
+    ctaLabel: "Let's connect",
+    base: {
+      version: 2,
+      tier: "free",
+      meta: { title: "", tagline: "" },
+      canvas: {
+        maxWidth: "720px",
+        minHeight: "100vh",
+        backgroundType: "gradient",
+        background: "#f0f9ff",
+        backgroundGradientTo: "#e0f2fe",
+        padding: "0",
+      },
+      palette: {
+        primary: "#2563eb",
+        secondary: "#059669",
+        accent: "#f59e0b",
+        text: "#0f172a",
+        muted: "#475569",
+        surface: "#ffffff",
+        border: "#cbd5e1",
+      },
+      typography: {
+        headingFont: "system-ui, sans-serif",
+        bodyFont: "system-ui, sans-serif",
+        headingWeight: 800,
+        bodyWeight: 400,
+        headingSize: "2.35rem",
+        bodySize: "1rem",
+        lineHeight: 1.65,
+      },
+      assets: {
+        avatarBorderRadius: "50%",
+        galleryImageBorderRadius: "50%",
+      },
+      sections: [
+        sharedSections.hero(
+          "linear-gradient(180deg, rgba(37,99,235,0.12) 0%, transparent 100%)",
+        ),
+        sharedSections.social,
+        sharedSections.gallery("In action", 3, "0 24px 20px"),
+        sharedSections.bio("rgba(255,255,255,0.95)", "rgba(203,213,225,0.9)"),
+        sharedSections.skills("Passions"),
+        sharedSections.cta(
+          "linear-gradient(135deg, rgba(37,99,235,0.14), rgba(5,150,105,0.12))",
+          "rgba(37,99,235,0.35)",
+          "Let's connect",
+        ),
+      ],
+    },
+  },
+  {
+    id: "midnight-creator",
+    name: "Midnight Creator",
+    description: "Dark creator stage — cyan accents, neon glow, content-first layout.",
+    matchKeywords:
+      /\b(creator|content|influencer|gaming|gamer|stream|tiktok|youtube|dark|moody|neon|night|tech|digital)\b/i,
+    galleryTitle: "Highlights",
+    skillsTitle: "Focus areas",
+    ctaLabel: "Work with me",
+    base: {
+      version: 2,
+      tier: "free",
+      meta: { title: "", tagline: "" },
+      canvas: {
+        maxWidth: "720px",
+        minHeight: "100vh",
+        backgroundType: "gradient",
+        background: "#050505",
+        backgroundGradientTo: "#0f172a",
+        padding: "0",
+      },
+      palette: {
+        primary: "#22d3ee",
+        secondary: "#38bdf8",
+        accent: "#fbbf24",
+        text: "#fafafa",
+        muted: "#94a3b8",
+        surface: "#111827",
+        border: "#334155",
+      },
+      typography: {
+        headingFont: "system-ui, sans-serif",
+        bodyFont: "system-ui, sans-serif",
+        headingWeight: 800,
+        bodyWeight: 400,
+        headingSize: "2.5rem",
+        bodySize: "1rem",
+        lineHeight: 1.6,
+      },
+      assets: {
+        avatarBorderRadius: "24px",
+        galleryImageBorderRadius: "20px",
+      },
+      sections: [
+        sharedSections.hero(
+          "linear-gradient(180deg, rgba(34,211,238,0.15) 0%, transparent 100%)",
+        ),
+        sharedSections.social,
+        sharedSections.gallery("Highlights", 2, "0 24px 24px"),
+        sharedSections.bio("rgba(17,24,39,0.92)", "rgba(51,65,85,0.9)"),
+        sharedSections.skills("Focus areas"),
+        sharedSections.cta(
+          "linear-gradient(135deg, rgba(34,211,238,0.18), rgba(56,189,248,0.12))",
+          "rgba(34,211,238,0.4)",
+          "Work with me",
+        ),
+      ],
+    },
+  },
+  {
+    id: "studio-clean",
+    name: "Studio Clean",
+    description: "Minimal light portfolio — airy whitespace, soft corners, editorial feel.",
+    matchKeywords:
+      /\b(minimal|clean|simple|professional|portfolio|corporate|modern|light|white|airy|elegant)\b/i,
+    galleryTitle: "Portfolio",
+    skillsTitle: "Expertise",
+    ctaLabel: "Get in touch",
+    base: {
+      version: 2,
+      tier: "free",
+      meta: { title: "", tagline: "" },
+      canvas: {
+        maxWidth: "720px",
+        minHeight: "100vh",
+        backgroundType: "gradient",
+        background: "#fafafa",
+        backgroundGradientTo: "#f4f4f5",
+        padding: "0",
+      },
+      palette: {
+        primary: "#18181b",
+        secondary: "#52525b",
+        accent: "#2563eb",
+        text: "#18181b",
+        muted: "#71717a",
+        surface: "#ffffff",
+        border: "#e4e4e7",
+      },
+      typography: {
+        headingFont: "Georgia, 'Times New Roman', serif",
+        bodyFont: "system-ui, sans-serif",
+        headingWeight: 700,
+        bodyWeight: 400,
+        headingSize: "2.25rem",
+        bodySize: "1rem",
+        lineHeight: 1.7,
+      },
+      assets: {
+        avatarBorderRadius: "20px",
+        galleryImageBorderRadius: "16px",
+      },
+      sections: [
+        sharedSections.hero(
+          "linear-gradient(180deg, rgba(24,24,27,0.04) 0%, transparent 100%)",
+        ),
+        sharedSections.social,
+        sharedSections.gallery("Portfolio", 2, "0 24px 28px"),
+        sharedSections.bio("rgba(255,255,255,0.98)", "rgba(228,228,231,0.95)"),
+        sharedSections.skills("Expertise"),
+        sharedSections.cta(
+          "rgba(24,24,27,0.04)",
+          "rgba(228,228,231,1)",
+          "Get in touch",
+        ),
+      ],
+    },
+  },
+  {
+    id: "gold-ledger",
+    name: "Gold Ledger",
+    description: "Luxury dark stage — gold accents, premium typography, showcase gallery.",
+    matchKeywords:
+      /\b(luxury|gold|premium|fashion|style|elegant|vip|brand|music|artist|singer|rapper)\b/i,
+    galleryTitle: "Selected work",
+    skillsTitle: "Signature",
+    ctaLabel: "Book now",
+    base: {
+      version: 2,
+      tier: "free",
+      meta: { title: "", tagline: "" },
+      canvas: {
+        maxWidth: "720px",
+        minHeight: "100vh",
+        backgroundType: "gradient",
+        background: "#0c0a09",
+        backgroundGradientTo: "#1c1917",
+        padding: "0",
+      },
+      palette: {
+        primary: "#f59e0b",
+        secondary: "#fde68a",
+        accent: "#fbbf24",
+        text: "#fafaf9",
+        muted: "#a8a29e",
+        surface: "#1c1917",
+        border: "#44403c",
+      },
+      typography: {
+        headingFont: "Georgia, 'Times New Roman', serif",
+        bodyFont: "system-ui, sans-serif",
+        headingWeight: 700,
+        bodyWeight: 400,
+        headingSize: "2.4rem",
+        bodySize: "1rem",
+        lineHeight: 1.65,
+      },
+      assets: {
+        avatarBorderRadius: "50%",
+        galleryImageBorderRadius: "12px",
+      },
+      sections: [
+        sharedSections.hero(
+          "linear-gradient(180deg, rgba(245,158,11,0.14) 0%, transparent 100%)",
+        ),
+        sharedSections.social,
+        sharedSections.gallery("Selected work", 2, "0 24px 24px"),
+        sharedSections.bio("rgba(28,25,23,0.94)", "rgba(68,64,60,0.85)"),
+        sharedSections.skills("Signature"),
+        sharedSections.cta(
+          "linear-gradient(135deg, rgba(245,158,11,0.2), rgba(251,191,36,0.1))",
+          "rgba(245,158,11,0.45)",
+          "Book now",
+        ),
+      ],
+    },
+  },
+];
+
+export function getArchetypeById(id: string): StageArchetype | undefined {
+  return STAGE_ARCHETYPES.find((archetype) => archetype.id === id);
+}
+
+export const DEFAULT_ARCHETYPE_ID = "field-day";

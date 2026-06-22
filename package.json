@@ -4,6 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "predev": "node scripts/check-dev-vars.mjs",
+    "dev:init": "node scripts/dev-init.mjs",
+    "verify:design": "tsx scripts/verify-design-engine.ts",
+    "verify:design:live": "tsx scripts/verify-design-engine-live.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
