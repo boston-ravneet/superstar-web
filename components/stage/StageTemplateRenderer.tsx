@@ -2,6 +2,10 @@ import type {
   StageTemplateDocument,
   StageTemplateSection,
 } from "@/lib/types/stage-template";
+import {
+  buildGoogleFontsHref,
+  collectGoogleFontFamilies,
+} from "@/lib/stage/google-fonts";
 
 function sectionStyle(section: StageTemplateSection, palette: StageTemplateDocument["palette"]) {
   return {
@@ -44,24 +48,20 @@ function HeroSection({
   const handle = String(section.content.handle ?? "");
   const subheadline = String(section.content.subheadline ?? "");
   const avatarUrl = String(section.content.avatarUrl ?? "");
+  const isRow = section.layout.direction === "row";
 
-  return (
-    <div style={sectionStyle(section, palette)}>
-      {avatarUrl ? (
-        <img
-          src={avatarUrl}
-          alt={headline}
-          style={{
-            width: 128,
-            height: 128,
-            borderRadius: avatarBorderRadius,
-            objectFit: "cover",
-            border: `2px solid ${palette.border}`,
-            flexShrink: 0,
-          }}
-        />
-      ) : null}
-      <p style={{ color: palette.muted, letterSpacing: "0.2em", fontSize: 12 }}>
+  const textBlock = (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: isRow ? "flex-start" : "center",
+        gap: "8px",
+        flex: isRow ? 1 : undefined,
+        minWidth: 0,
+      }}
+    >
+      <p style={{ color: palette.muted, letterSpacing: "0.2em", fontSize: 12, margin: 0 }}>
         @{handle}
       </p>
       <h1
@@ -71,6 +71,7 @@ function HeroSection({
           fontWeight: typography.headingWeight,
           fontSize: typography.headingSize,
           margin: 0,
+          textAlign: isRow ? "left" : "center",
         }}
       >
         {headline}
@@ -83,12 +84,33 @@ function HeroSection({
             fontSize: typography.bodySize,
             lineHeight: typography.lineHeight,
             maxWidth: 520,
-            textAlign: "center",
+            textAlign: isRow ? "left" : "center",
+            margin: 0,
           }}
         >
           {subheadline}
         </p>
       ) : null}
+    </div>
+  );
+
+  return (
+    <div style={sectionStyle(section, palette)}>
+      {avatarUrl ? (
+        <img
+          src={avatarUrl}
+          alt={headline}
+          style={{
+            width: isRow ? 112 : 128,
+            height: isRow ? 112 : 128,
+            borderRadius: avatarBorderRadius,
+            objectFit: "cover",
+            border: `2px solid ${palette.border}`,
+            flexShrink: 0,
+          }}
+        />
+      ) : null}
+      {textBlock}
     </div>
   );
 }
@@ -537,6 +559,10 @@ export function StageTemplateRenderer({
     galleryImageBorderRadius: template.assets?.galleryImageBorderRadius ?? "20px",
   };
 
+  const googleFontsHref = buildGoogleFontsHref(
+    collectGoogleFontFamilies(template.typography),
+  );
+
   return (
     <div
       style={{
@@ -544,8 +570,20 @@ export function StageTemplateRenderer({
         background,
         color: template.palette.text,
         padding: template.canvas.padding,
+        fontFamily: template.typography.bodyFont,
       }}
     >
+      {googleFontsHref ? (
+        <>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link
+            rel="preconnect"
+            href="https://fonts.gstatic.com"
+            crossOrigin="anonymous"
+          />
+          <link rel="stylesheet" href={googleFontsHref} />
+        </>
+      ) : null}
       {preview ? (
         <div
           style={{

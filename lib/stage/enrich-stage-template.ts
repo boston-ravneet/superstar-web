@@ -62,6 +62,13 @@ export function normalizeBuilderInput(
       typeof value.polishedTagline === "string"
         ? value.polishedTagline
         : undefined,
+    preferredArchetypeId:
+      value.preferredArchetypeId === "field-day" ||
+      value.preferredArchetypeId === "midnight-creator" ||
+      value.preferredArchetypeId === "studio-clean" ||
+      value.preferredArchetypeId === "gold-ledger"
+        ? value.preferredArchetypeId
+        : undefined,
   };
 }
 

@@ -4,3 +4,4 @@ export {
   getArchetypeById,
   STAGE_ARCHETYPES,
 } from "@/lib/stage/archetypes/presets";
+export { ARCHETYPE_CATALOG } from "@/lib/stage/archetypes/catalog";

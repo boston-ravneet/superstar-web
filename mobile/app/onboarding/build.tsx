@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { KeyboardAwareScreen } from "@/components/KeyboardAwareScreen";
+import { ARCHETYPE_OPTIONS, type ArchetypeId } from "@/constants/archetypes";
 import {
   registerProfile,
   requestUploadToken,
@@ -38,6 +39,8 @@ export default function BuildStageScreen() {
   const [designInstructions, setDesignInstructions] = useState(
     initial.designInstructions,
   );
+  const [preferredArchetypeId, setPreferredArchetypeId] =
+    useState<ArchetypeId | null>(initial.preferredArchetypeId);
   const [imageUris, setImageUris] = useState(initial.imageUris);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -153,6 +156,7 @@ export default function BuildStageScreen() {
       patchOnboardingState({
         bio: bio.trim(),
         designInstructions: designInstructions.trim(),
+        preferredArchetypeId,
         profileId,
         imagePublicUrls: publicUrls,
       });
@@ -190,8 +194,82 @@ export default function BuildStageScreen() {
         <Text style={styles.subtitle}>
           {isEdit
             ? "Change your bio or photos and we will redesign your stage the same way as when you first created it."
-            : "We will design a custom page from your bio and photos. No layout decisions needed — just share your story."}
+            : "Pick a style vibe, share your story, and we will design your custom page."}
         </Text>
+
+        <Text style={styles.sectionLabel}>Choose a style</Text>
+        <Text style={styles.sectionHint}>
+          Optional — tap one or let us auto-pick from your bio.
+        </Text>
+        <View style={styles.styleGrid}>
+          {ARCHETYPE_OPTIONS.map((option) => {
+            const selected = preferredArchetypeId === option.id;
+            return (
+              <Pressable
+                key={option.id}
+                style={[
+                  styles.styleCard,
+                  {
+                    backgroundColor: option.previewColors.background,
+                    borderColor: selected
+                      ? option.previewColors.primary
+                      : colors.border,
+                  },
+                  selected && styles.styleCardSelected,
+                ]}
+                onPress={() => {
+                  const next =
+                    preferredArchetypeId === option.id ? null : option.id;
+                  setPreferredArchetypeId(next);
+                  patchOnboardingState({ preferredArchetypeId: next });
+                }}
+              >
+                <View style={styles.styleSwatches}>
+                  <View
+                    style={[
+                      styles.styleSwatch,
+                      { backgroundColor: option.previewColors.primary },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.styleSwatch,
+                      { backgroundColor: option.previewColors.accent },
+                    ]}
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.styleName,
+                    {
+                      color:
+                        option.id === "midnight-creator" ||
+                        option.id === "gold-ledger"
+                          ? "#fafafa"
+                          : "#0f172a",
+                    },
+                  ]}
+                >
+                  {option.name}
+                </Text>
+                <Text
+                  style={[
+                    styles.styleDescription,
+                    {
+                      color:
+                        option.id === "midnight-creator" ||
+                        option.id === "gold-ledger"
+                          ? "#cbd5e1"
+                          : "#475569",
+                    },
+                  ]}
+                >
+                  {option.description}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
 
         <TextInput
           value={bio}
@@ -295,8 +373,50 @@ const styles = StyleSheet.create({
   sectionLabel: {
     color: colors.text,
     fontWeight: "700",
-    marginBottom: 12,
+    marginBottom: 6,
     marginTop: 8,
+  },
+  sectionHint: {
+    color: colors.muted,
+    fontSize: 13,
+    marginBottom: 12,
+  },
+  styleGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginBottom: 20,
+  },
+  styleCard: {
+    width: "48%",
+    flexGrow: 1,
+    minWidth: "46%",
+    borderRadius: 16,
+    borderWidth: 2,
+    padding: 12,
+    minHeight: 118,
+  },
+  styleCardSelected: {
+    borderWidth: 2,
+  },
+  styleSwatches: {
+    flexDirection: "row",
+    gap: 6,
+    marginBottom: 10,
+  },
+  styleSwatch: {
+    width: 18,
+    height: 18,
+    borderRadius: 999,
+  },
+  styleName: {
+    fontWeight: "800",
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  styleDescription: {
+    fontSize: 11,
+    lineHeight: 15,
   },
   photoRow: {
     flexDirection: "row",

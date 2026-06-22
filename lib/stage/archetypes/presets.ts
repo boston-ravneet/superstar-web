@@ -2,12 +2,12 @@ import type { StageArchetype } from "@/lib/stage/archetypes/types";
 import { DEFAULT_LAYOUT, DEFAULT_STYLE } from "@/lib/stage/template-defaults";
 
 const sharedSections = {
-  hero: (heroBg: string) => ({
+  hero: (heroBg: string, padding = "48px 24px 28px") => ({
     id: "hero",
     type: "hero" as const,
     order: 0,
     visible: true,
-    layout: { ...DEFAULT_LAYOUT, padding: "48px 24px 28px", gap: "14px" },
+    layout: { ...DEFAULT_LAYOUT, padding, gap: "14px" },
     style: { ...DEFAULT_STYLE, background: heroBg },
     content: {
       headline: "",
@@ -16,6 +16,43 @@ const sharedSections = {
       avatarUrl: "",
       showBadge: true,
     },
+  }),
+  heroRow: (heroBg: string) => ({
+    id: "hero",
+    type: "hero" as const,
+    order: 0,
+    visible: true,
+    layout: {
+      ...DEFAULT_LAYOUT,
+      direction: "row" as const,
+      align: "center" as const,
+      justify: "start" as const,
+      padding: "40px 24px 20px",
+      gap: "20px",
+    },
+    style: { ...DEFAULT_STYLE, background: heroBg },
+    content: {
+      headline: "",
+      handle: "",
+      subheadline: "",
+      avatarUrl: "",
+      showBadge: true,
+    },
+  }),
+  quote: (surface: string, border: string) => ({
+    id: "quote",
+    type: "quote" as const,
+    order: 1,
+    visible: true,
+    layout: { ...DEFAULT_LAYOUT, padding: "8px 24px 16px" },
+    style: {
+      ...DEFAULT_STYLE,
+      background: surface,
+      borderRadius: "16px",
+      borderColor: border,
+      borderWidth: "1px",
+    },
+    content: { text: "", author: "" },
   }),
   social: {
     id: "social",
@@ -124,8 +161,8 @@ export const STAGE_ARCHETYPES: StageArchetype[] = [
         border: "#cbd5e1",
       },
       typography: {
-        headingFont: "system-ui, sans-serif",
-        bodyFont: "system-ui, sans-serif",
+        headingFont: "'Inter', system-ui, sans-serif",
+        bodyFont: "'Inter', system-ui, sans-serif",
         headingWeight: 800,
         bodyWeight: 400,
         headingSize: "2.35rem",
@@ -183,9 +220,9 @@ export const STAGE_ARCHETYPES: StageArchetype[] = [
         border: "#334155",
       },
       typography: {
-        headingFont: "system-ui, sans-serif",
-        bodyFont: "system-ui, sans-serif",
-        headingWeight: 800,
+        headingFont: "'Space Grotesk', system-ui, sans-serif",
+        bodyFont: "'Inter', system-ui, sans-serif",
+        headingWeight: 700,
         bodyWeight: 400,
         headingSize: "2.5rem",
         bodySize: "1rem",
@@ -196,18 +233,22 @@ export const STAGE_ARCHETYPES: StageArchetype[] = [
         galleryImageBorderRadius: "20px",
       },
       sections: [
-        sharedSections.hero(
+        sharedSections.heroRow(
           "linear-gradient(180deg, rgba(34,211,238,0.15) 0%, transparent 100%)",
         ),
-        sharedSections.social,
-        sharedSections.gallery("Highlights", 2, "0 24px 24px"),
-        sharedSections.bio("rgba(17,24,39,0.92)", "rgba(51,65,85,0.9)"),
-        sharedSections.skills("Focus areas"),
-        sharedSections.cta(
-          "linear-gradient(135deg, rgba(34,211,238,0.18), rgba(56,189,248,0.12))",
-          "rgba(34,211,238,0.4)",
-          "Work with me",
-        ),
+        sharedSections.quote("rgba(17,24,39,0.85)", "rgba(34,211,238,0.35)"),
+        { ...sharedSections.social, order: 2 },
+        { ...sharedSections.gallery("Highlights", 2, "0 24px 24px"), order: 3 },
+        { ...sharedSections.bio("rgba(17,24,39,0.92)", "rgba(51,65,85,0.9)"), order: 4 },
+        { ...sharedSections.skills("Focus areas"), order: 5 },
+        {
+          ...sharedSections.cta(
+            "linear-gradient(135deg, rgba(34,211,238,0.18), rgba(56,189,248,0.12))",
+            "rgba(34,211,238,0.4)",
+            "Work with me",
+          ),
+          order: 6,
+        },
       ],
     },
   },
@@ -242,8 +283,8 @@ export const STAGE_ARCHETYPES: StageArchetype[] = [
         border: "#e4e4e7",
       },
       typography: {
-        headingFont: "Georgia, 'Times New Roman', serif",
-        bodyFont: "system-ui, sans-serif",
+        headingFont: "'Playfair Display', Georgia, serif",
+        bodyFont: "'Inter', system-ui, sans-serif",
         headingWeight: 700,
         bodyWeight: 400,
         headingSize: "2.25rem",
@@ -257,16 +298,20 @@ export const STAGE_ARCHETYPES: StageArchetype[] = [
       sections: [
         sharedSections.hero(
           "linear-gradient(180deg, rgba(24,24,27,0.04) 0%, transparent 100%)",
+          "56px 24px 32px",
         ),
-        sharedSections.social,
-        sharedSections.gallery("Portfolio", 2, "0 24px 28px"),
-        sharedSections.bio("rgba(255,255,255,0.98)", "rgba(228,228,231,0.95)"),
-        sharedSections.skills("Expertise"),
-        sharedSections.cta(
-          "rgba(24,24,27,0.04)",
-          "rgba(228,228,231,1)",
-          "Get in touch",
-        ),
+        { ...sharedSections.bio("rgba(255,255,255,0.98)", "rgba(228,228,231,0.95)"), order: 1 },
+        { ...sharedSections.gallery("Portfolio", 1, "0 24px 32px"), order: 2 },
+        { ...sharedSections.skills("Expertise"), order: 3 },
+        { ...sharedSections.social, order: 4 },
+        {
+          ...sharedSections.cta(
+            "rgba(24,24,27,0.04)",
+            "rgba(228,228,231,1)",
+            "Get in touch",
+          ),
+          order: 5,
+        },
       ],
     },
   },
@@ -301,8 +346,8 @@ export const STAGE_ARCHETYPES: StageArchetype[] = [
         border: "#44403c",
       },
       typography: {
-        headingFont: "Georgia, 'Times New Roman', serif",
-        bodyFont: "system-ui, sans-serif",
+        headingFont: "'Cormorant Garamond', Georgia, serif",
+        bodyFont: "'Inter', system-ui, sans-serif",
         headingWeight: 700,
         bodyWeight: 400,
         headingSize: "2.4rem",
@@ -316,16 +361,20 @@ export const STAGE_ARCHETYPES: StageArchetype[] = [
       sections: [
         sharedSections.hero(
           "linear-gradient(180deg, rgba(245,158,11,0.14) 0%, transparent 100%)",
+          "52px 24px 36px",
         ),
-        sharedSections.social,
-        sharedSections.gallery("Selected work", 2, "0 24px 24px"),
-        sharedSections.bio("rgba(28,25,23,0.94)", "rgba(68,64,60,0.85)"),
-        sharedSections.skills("Signature"),
-        sharedSections.cta(
-          "linear-gradient(135deg, rgba(245,158,11,0.2), rgba(251,191,36,0.1))",
-          "rgba(245,158,11,0.45)",
-          "Book now",
-        ),
+        { ...sharedSections.social, order: 1 },
+        { ...sharedSections.bio("rgba(28,25,23,0.94)", "rgba(68,64,60,0.85)"), order: 2 },
+        { ...sharedSections.gallery("Selected work", 2, "0 24px 28px"), order: 3 },
+        { ...sharedSections.skills("Signature"), order: 4 },
+        {
+          ...sharedSections.cta(
+            "linear-gradient(135deg, rgba(245,158,11,0.2), rgba(251,191,36,0.1))",
+            "rgba(245,158,11,0.45)",
+            "Book now",
+          ),
+          order: 5,
+        },
       ],
     },
   },

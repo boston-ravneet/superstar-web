@@ -12,6 +12,7 @@ import { fetchImagePartsForGemini } from "@/lib/ai/fetch-image-parts";
 import { classifyCreator } from "@/lib/ai/classify-creator";
 import { buildFromArchetype } from "@/lib/stage/fill-archetype";
 import type { CreatorClassification } from "@/lib/stage/archetypes";
+import { validateStageTemplate } from "@/lib/stage/validate-stage-template";
 
 const GEMINI_MODEL = "gemini-2.5-flash";
 
@@ -339,6 +340,30 @@ export async function generateStageTemplate(
         template,
         source: "fallback",
         error: "Invalid JSON from Gemini",
+      };
+    }
+
+    const validation = validateStageTemplate(
+      parsed,
+      input,
+      options?.refinePrompt,
+    );
+
+    if (!validation.valid) {
+      logStageGeneration("generation_fallback", {
+        reason: "Gemini output failed quality checks",
+        issues: validation.issues,
+        archetypeId: classification.archetypeId,
+      });
+      const template = postProcessTemplate(
+        archetypeStarter,
+        input,
+        options?.refinePrompt,
+      );
+      return {
+        template,
+        source: "fallback",
+        error: `Quality check failed: ${validation.issues.join("; ")}`,
       };
     }
 

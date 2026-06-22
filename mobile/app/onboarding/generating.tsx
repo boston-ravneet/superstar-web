@@ -62,6 +62,7 @@ export default function GeneratingScreen() {
             bio: state.bio,
             designInstructions: state.designInstructions || undefined,
             imageUrls,
+            preferredArchetypeId: state.preferredArchetypeId ?? undefined,
           },
           sessionToken,
         );

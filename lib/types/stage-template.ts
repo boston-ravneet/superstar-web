@@ -97,6 +97,8 @@ export interface ProfileBuilderInput {
   username: string;
   instagramHandle?: string | null;
   tiktokHandle?: string | null;
+  /** User-selected layout style; overrides auto-classification when set. */
+  preferredArchetypeId?: import("@/lib/stage/archetypes/types").ArchetypeId;
   /** Which bio copy is shown on the stage page. */
   bioDisplayMode?: "polished" | "original";
   /** AI-polished about text (saved after generation). */
@@ -117,6 +119,7 @@ export interface BuilderSubmitPayload {
   /** @deprecated use designInstructions */
   extraDetails?: string;
   imageUrls: string[];
+  preferredArchetypeId?: import("@/lib/stage/archetypes/types").ArchetypeId;
 }
 
 export interface BuilderRefinePayload {

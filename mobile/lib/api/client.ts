@@ -146,6 +146,7 @@ export async function submitProfileBuilder(
     designInstructions?: string;
     extraDetails?: string;
     imageUrls: string[];
+    preferredArchetypeId?: string;
   },
   sessionToken: string,
 ) {

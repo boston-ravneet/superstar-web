@@ -132,6 +132,21 @@ function verticalFromHaystack(haystack: string): string {
 
 /** Picks the best curated layout preset from bio, photos context, and design brief. */
 export function classifyCreator(input: ProfileBuilderInput): CreatorClassification {
+  if (input.preferredArchetypeId) {
+    const chosen = getArchetypeById(input.preferredArchetypeId);
+    if (chosen) {
+      const haystack = `${input.bio}\n${combineDesignHints(input.designInstructions)}`;
+      return {
+        archetypeId: chosen.id,
+        archetypeName: chosen.name,
+        vertical: verticalFromHaystack(haystack),
+        mood: moodForArchetype(chosen.id),
+        confidence: 1,
+        matchReasons: ["Creator selected this style"],
+      };
+    }
+  }
+
   const hints = combineDesignHints(input.designInstructions);
   const haystack = `${input.bio}\n${hints}`;
   const interests = extractInterestTags(input.bio, input.designInstructions);

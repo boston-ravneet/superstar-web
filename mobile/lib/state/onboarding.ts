@@ -1,4 +1,5 @@
 import type { OAuthIdentityPayload } from "@/types/profile";
+import type { ArchetypeId } from "@/constants/archetypes";
 
 export interface OnboardingState {
   mode: "create" | "edit";
@@ -6,6 +7,7 @@ export interface OnboardingState {
   displayName: string;
   bio: string;
   designInstructions: string;
+  preferredArchetypeId: ArchetypeId | null;
   oauth: OAuthIdentityPayload | null;
   profileId: string | null;
   imageUris: [string | null, string | null, string | null];
@@ -18,6 +20,7 @@ export const initialOnboardingState: OnboardingState = {
   displayName: "",
   bio: "",
   designInstructions: "",
+  preferredArchetypeId: null,
   oauth: null,
   profileId: null,
   imageUris: [null, null, null],

@@ -71,9 +71,16 @@ export function buildFromArchetype(
     }
 
     if (section.type === "gallery") {
+      const isGoldLedger = classification.archetypeId === "gold-ledger";
       const images = input.imageUrls.map((url, index) => ({
         url,
-        span: circular ? 1 : index === 0 ? 2 : 1,
+        span: circular
+          ? 1
+          : isGoldLedger && index === 0
+            ? 2
+            : index === 0
+              ? 2
+              : 1,
       }));
 
       return {
@@ -105,6 +112,17 @@ export function buildFromArchetype(
         content: {
           title: archetype.skillsTitle,
           tags: skillCandidates,
+        },
+      };
+    }
+
+    if (section.type === "quote") {
+      return {
+        ...section,
+        visible: Boolean(copy.tagline),
+        content: {
+          text: copy.tagline,
+          author: input.displayName,
         },
       };
     }

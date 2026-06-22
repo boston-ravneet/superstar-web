@@ -1,4 +1,6 @@
 import { logStageGeneration } from "@/lib/ai/stage-generation-log";
+import { getBindings } from "@/lib/cloudflare/env";
+import { extractMediaObjectKey } from "@/lib/media/urls";
 
 export interface GeminiImagePart {
   inline_data: {
@@ -23,16 +25,39 @@ function mimeFromUrl(url: string): string {
   return "image/jpeg";
 }
 
-function normalizeFetchUrl(url: string): string {
-  try {
-    const parsed = new URL(url);
-    if (parsed.pathname.includes("/media/profiles/")) {
-      return `http://127.0.0.1:3000${parsed.pathname}`;
+async function loadImageBytes(
+  url: string,
+): Promise<{ buffer: ArrayBuffer; contentType: string } | null> {
+  const key = extractMediaObjectKey(url);
+
+  if (key) {
+    try {
+      const { MEDIA_BUCKET } = await getBindings();
+      const object = await MEDIA_BUCKET.get(key);
+
+      if (object) {
+        const buffer = await object.arrayBuffer();
+        const contentType =
+          object.httpMetadata?.contentType ?? mimeFromUrl(url);
+        return { buffer, contentType };
+      }
+    } catch (error) {
+      logStageGeneration("vision_image_r2_fetch_error", {
+        url,
+        key,
+        error: error instanceof Error ? error.message : "R2 fetch failed",
+      });
     }
-  } catch {
-    return url;
   }
-  return url;
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    return null;
+  }
+
+  const buffer = await response.arrayBuffer();
+  const contentType = response.headers.get("content-type") ?? mimeFromUrl(url);
+  return { buffer, contentType };
 }
 
 export async function fetchImagePartsForGemini(
@@ -45,20 +70,18 @@ export async function fetchImagePartsForGemini(
       continue;
     }
 
-    const fetchUrl = normalizeFetchUrl(url);
-
     try {
-      const response = await fetch(fetchUrl);
-      if (!response.ok) {
+      const loaded = await loadImageBytes(url);
+      if (!loaded) {
         logStageGeneration("vision_image_fetch_failed", {
           index,
           url,
-          status: response.status,
         });
         continue;
       }
 
-      const buffer = await response.arrayBuffer();
+      const { buffer, contentType } = loaded;
+
       if (buffer.byteLength > MAX_BYTES) {
         logStageGeneration("vision_image_skipped_large", {
           index,
@@ -68,7 +91,6 @@ export async function fetchImagePartsForGemini(
         continue;
       }
 
-      const contentType = response.headers.get("content-type") ?? mimeFromUrl(url);
       const base64 = Buffer.from(buffer).toString("base64");
 
       parts.push({
@@ -83,6 +105,7 @@ export async function fetchImagePartsForGemini(
         url,
         bytes: buffer.byteLength,
         mimeType: contentType,
+        source: extractMediaObjectKey(url) ? "r2" : "http",
       });
     } catch (error) {
       logStageGeneration("vision_image_fetch_error", {

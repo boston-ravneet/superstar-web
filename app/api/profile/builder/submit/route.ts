@@ -66,6 +66,7 @@ export async function POST(request: Request) {
       username: profile.username,
       instagramHandle: profile.instagram_handle,
       tiktokHandle: profile.tiktok_handle,
+      preferredArchetypeId: payload.preferredArchetypeId,
     };
 
     await saveBuilderInput(auth.bindings.DB, payload.profileId, builderInput, {
