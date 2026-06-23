@@ -3,6 +3,7 @@ import { summarizeBioProfessionally, sanitizeSkillTags } from "@/lib/ai/bio-copy
 import { combineDesignHints } from "@/lib/ai/design-theme";
 import { finalizeStageTemplate } from "@/lib/stage/enrich-stage-template";
 import { applyDesignThemeHints } from "@/lib/ai/design-theme";
+import { buildCtaContent } from "@/lib/stage/resolve-connect-actions";
 import {
   getArchetypeById,
   DEFAULT_ARCHETYPE_ID,
@@ -128,11 +129,13 @@ export function buildFromArchetype(
     }
 
     if (section.type === "cta") {
+      const cta = buildCtaContent(input, archetype.ctaLabel);
       return {
         ...section,
         content: {
-          label: archetype.ctaLabel,
-          href: `mailto:hello@getsuperstar.info?subject=Booking%20@${input.username}`,
+          label: cta.label,
+          href: cta.href,
+          actions: cta.actions,
         },
       };
     }

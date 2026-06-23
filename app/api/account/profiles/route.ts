@@ -5,6 +5,7 @@ import {
   verifyAccountSessionToken,
 } from "@/lib/auth/account-session";
 import { listProfilesForAccount } from "@/lib/db/accounts";
+import { getProfileAnalyticsSummary } from "@/lib/db/profile-analytics";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import type { AccountProfileSummary } from "@/lib/types/account";
 
@@ -25,15 +26,28 @@ export async function GET(request: Request) {
     }
 
     const rows = await listProfilesForAccount(bindings.DB, session.accountId);
-    const profiles: AccountProfileSummary[] = rows.map((row) => ({
-      id: row.id,
-      username: row.username,
-      displayName: row.display_name ?? row.username,
-      profileImageUrl: row.profile_image_url,
-      publishStatus: (row.publish_status ?? "draft") as AccountProfileSummary["publishStatus"],
-      isVerified: row.is_verified === 1,
-      isLocked: row.is_locked === 1,
-    }));
+    const profiles: AccountProfileSummary[] = await Promise.all(
+      rows.map(async (row) => {
+        const publishStatus = (row.publish_status ??
+          "draft") as AccountProfileSummary["publishStatus"];
+        const analytics =
+          publishStatus === "published"
+            ? await getProfileAnalyticsSummary(bindings.DB, row.id)
+            : null;
+
+        return {
+          id: row.id,
+          username: row.username,
+          displayName: row.display_name ?? row.username,
+          profileImageUrl: row.profile_image_url,
+          publishStatus,
+          isVerified: row.is_verified === 1,
+          isLocked: row.is_locked === 1,
+          totalViews: analytics?.totalViews ?? 0,
+          viewsLast7Days: analytics?.viewsLast7Days ?? 0,
+        };
+      }),
+    );
 
     return jsonOk({ profiles });
   } catch (error) {

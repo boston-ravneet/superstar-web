@@ -134,6 +134,14 @@ export default function DashboardScreen() {
             </View>
             <Text style={styles.displayName}>{item.displayName}</Text>
             <Text style={styles.publicUrl}>{getPublicProfileUrl(item.username)}</Text>
+            {item.publishStatus === "published" ? (
+              <Text style={styles.analyticsText}>
+                {item.totalViews ?? 0} total views
+                {(item.viewsLast7Days ?? 0) > 0
+                  ? ` · ${item.viewsLast7Days} this week`
+                  : ""}
+              </Text>
+            ) : null}
             <Pressable
               style={styles.editButton}
               disabled={editingId === item.id}
@@ -244,6 +252,12 @@ const styles = StyleSheet.create({
   publicUrl: {
     color: colors.muted,
     fontSize: 13,
+    marginBottom: 12,
+  },
+  analyticsText: {
+    color: colors.cyan,
+    fontSize: 12,
+    fontWeight: "600",
     marginBottom: 12,
   },
   editButton: {

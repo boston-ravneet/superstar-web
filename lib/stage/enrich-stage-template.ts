@@ -6,6 +6,7 @@ import type {
 import { wantsCircularImages } from "@/lib/ai/design-theme";
 import { sanitizeSkillTags } from "@/lib/ai/bio-copy";
 import { DEFAULT_LAYOUT, DEFAULT_STYLE } from "@/lib/stage/template-defaults";
+import { buildCtaContent } from "@/lib/stage/resolve-connect-actions";
 
 export function normalizeBuilderInput(
   raw: unknown,
@@ -216,6 +217,24 @@ export function finalizeStageTemplate(
           tags,
         },
         visible: tags.length > 0,
+      };
+    }
+
+    if (section.type === "cta") {
+      const fallbackLabel =
+        typeof section.content.label === "string"
+          ? section.content.label
+          : "Let's connect";
+      const cta = buildCtaContent(input, fallbackLabel);
+
+      return {
+        ...section,
+        content: {
+          ...section.content,
+          label: cta.label,
+          href: cta.href,
+          actions: cta.actions,
+        },
       };
     }
 

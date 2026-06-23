@@ -194,6 +194,12 @@ export async function fetchBuilderStatus(profileId: string, sessionToken: string
     } | null;
     previewUrl: string | null;
     publicUrl: string | null;
+    analytics?: {
+      totalViews: number;
+      viewsLast7Days: number;
+      viewsLast30Days: number;
+      daily: Array<{ date: string; views: number }>;
+    } | null;
   }>(
     `/api/profile/builder/status?profileId=${encodeURIComponent(profileId)}`,
     { method: "GET" },

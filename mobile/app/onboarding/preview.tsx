@@ -66,6 +66,10 @@ export default function PreviewScreen() {
   const [togglingBio, setTogglingBio] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
+  const [viewAnalytics, setViewAnalytics] = useState<{
+    totalViews: number;
+    viewsLast7Days: number;
+  } | null>(null);
 
   useEffect(() => {
     async function loadPreview() {
@@ -77,6 +81,12 @@ export default function PreviewScreen() {
         const status = await fetchBuilderStatus(profileId, sessionToken);
         setPreviewUrl(getPreviewProfileUrl(status.username));
         setUseOriginalBio(status.bioDisplayMode === "original");
+        if (status.analytics) {
+          setViewAnalytics({
+            totalViews: status.analytics.totalViews,
+            viewsLast7Days: status.analytics.viewsLast7Days,
+          });
+        }
         if (status.generationError) {
           setStatusMessage(
             `Using local builder (no AI): ${status.generationError}. Add GEMINI_API_KEY to .dev.vars and restart the web server.`,
@@ -254,6 +264,12 @@ export default function PreviewScreen() {
             ) : null}
 
             <View style={styles.panel}>
+              {viewAnalytics ? (
+                <Text style={styles.analyticsText}>
+                  {viewAnalytics.totalViews} page views ·{" "}
+                  {viewAnalytics.viewsLast7Days} this week
+                </Text>
+              ) : null}
               <Text style={styles.sectionLabel}>Edit your preview</Text>
               <Text style={styles.panelHint}>
                 Scroll here to request design changes. Type what you want below,
@@ -383,6 +399,12 @@ const styles = StyleSheet.create({
   },
   bioToggleCopy: {
     flex: 1,
+  },
+  analyticsText: {
+    color: colors.cyan,
+    fontSize: 13,
+    fontWeight: "600",
+    marginBottom: 10,
   },
   panelTitle: {
     color: colors.text,

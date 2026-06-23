@@ -41,4 +41,6 @@ export interface AccountProfileSummary {
   publishStatus: "draft" | "generating" | "preview" | "published";
   isVerified: boolean;
   isLocked: boolean;
+  totalViews?: number;
+  viewsLast7Days?: number;
 }

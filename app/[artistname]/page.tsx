@@ -104,6 +104,8 @@ export default async function ArtistProfilePage({ params }: ArtistPageProps) {
       return (
         <StageTemplateRenderer
           template={rewriteMediaUrlsInTemplate(profile.liveStageTemplate, webBase)}
+          profileId={profile.id}
+          trackViews
         />
       );
     }

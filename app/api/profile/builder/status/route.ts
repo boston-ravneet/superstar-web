@@ -8,6 +8,7 @@ import {
   resolveBuilderInputForEdit,
 } from "@/lib/db/profile-builder";
 import { getRecentStageGenerationLogs } from "@/lib/ai/stage-generation-log";
+import { getProfileAnalyticsSummary } from "@/lib/db/profile-analytics";
 import { parseStageTemplate } from "@/lib/stage/parse-stage-template";
 import { getRequestWebBase } from "@/lib/api/request-web-base";
 
@@ -45,6 +46,10 @@ export async function GET(request: Request) {
     const template = parseStageTemplate(profile.stage_template_json);
     const webBase = getRequestWebBase(request);
     const builderInput = resolveBuilderInputForEdit(profile);
+    const analytics =
+      profile.publish_status === "published"
+        ? await getProfileAnalyticsSummary(auth.bindings.DB, profile.id)
+        : null;
 
     return jsonOk({
       profileId: profile.id,
@@ -57,6 +62,7 @@ export async function GET(request: Request) {
       originalBio: builderInput.bio,
       template,
       builderInput,
+      analytics,
       previewUrl: `${webBase}/preview/${encodeURIComponent(profile.username)}`,
       publicUrl: `${webBase}/${encodeURIComponent(profile.username)}`,
     });
