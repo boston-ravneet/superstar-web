@@ -16,6 +16,36 @@ import { validateStageTemplate } from "@/lib/stage/validate-stage-template";
 
 const GEMINI_MODEL = "gemini-2.5-flash";
 
+const SECTION_TITLE_GUIDANCE = `## SECTION TITLES — YOU DECIDE (required)
+
+Invent fresh, persona-specific titles for \`gallery.title\`, \`bio.title\`, and \`skills.title\`.
+Do NOT copy archetype placeholder titles verbatim. Do NOT use generic LinkedIn/résumé headers.
+Each creator's page should feel unique — a comedian and a doctor should never share the same section names.
+
+**Rules:**
+- 2–4 words, title case, personality-forward
+- \`gallery.title\` MUST sound like a photo/visual section (never "Leadership", "Engagements", "Work History", "Professional Summary")
+- \`bio.title\` and \`skills.title\` should match their world and craft
+- You may invent titles beyond the examples below — these are inspiration, not a fixed menu
+
+**Examples (pick a vibe or invent your own):**
+
+| Who they are | gallery.title | bio.title | skills.title |
+|--------------|---------------|-----------|--------------|
+| Actor | On Set · Roles & Moments | The Story | The Craft |
+| Comedian | On Stage · Crowd Shots | My Story | Topics & Style |
+| Painter / visual artist | The Studio · Recent Work | About the Artist | Mediums & Focus |
+| Doctor / clinician | In Practice · At the Clinic | Background | Specialties |
+| Athlete | In Action · Game Day | About Me | Passions |
+| Musician | On Stage · Live Sessions | The Story | Sound & Style |
+| Chef | In the Kitchen · Plates | About the Chef | Cuisine & Style |
+| Fashion / model | The Lookbook · Runway | About | Style & Focus |
+| Creator / streamer | Behind the Content · Clips | My Story | Focus Areas |
+| Student | Campus Days · Life & Moments | About Me | Interests |
+| Sales / business pro | At Work · In the Field | About | Core Strengths |
+
+If the photos show something specific (sports field, clinic, kitchen, stage), let that guide \`gallery.title\`.`;
+
 const STAGE_TEMPLATE_SCHEMA = `{
   "version": 2,
   "tier": "free",
@@ -30,9 +60,9 @@ const STAGE_TEMPLATE_SCHEMA = `{
 Section types and content:
 - hero: { headline, handle, subheadline, avatarUrl, showBadge }
 - social: { instagramHandle, tiktokHandle }
-- gallery: { title, images: [{ url, caption?, span: 1 }] }
-- bio: { title: "About", text }
-- skills: { title, tags: string[] }
+- gallery: { title: "persona-specific photo section name YOU invent", images: [{ url, caption?, span: 1 }] }
+- bio: { title: "persona-specific bio section name YOU invent", text }
+- skills: { title: "persona-specific skills section name YOU invent", tags: string[] }
 - quote: { text, author? }
 - cta: { label, href }`;
 
@@ -83,7 +113,7 @@ function buildPrompt(
   const currentTemplateBlock = options?.currentTemplate
     ? `\n## CURRENT TEMPLATE\nModify this JSON per the tweak request. Keep image URLs unless asked to change:\n${JSON.stringify(options.currentTemplate, null, 2)}\n`
     : options?.archetypeStarter
-      ? `\n## START FROM THIS CURATED ARCHETYPE\nYou MUST keep the same section types, order, and overall structure. Personalize copy, palette accents, gallery title, and skill tags — do not remove sections.\nArchetype: ${options.classification?.archetypeName ?? "curated preset"}\nVertical: ${options.classification?.vertical ?? "general"}\nMood: ${options.classification?.mood ?? "bright"}\n\n${JSON.stringify(options.archetypeStarter, null, 2)}\n`
+      ? `\n## START FROM THIS CURATED ARCHETYPE\nYou MUST keep the same section types, order, and overall structure. Replace placeholder section titles with persona-specific names YOU invent. Personalize copy, palette accents, and skill tags — do not remove sections.\nLayout mood: ${options.classification?.archetypeName ?? "curated preset"} · vertical: ${options.classification?.vertical ?? "general"} · mood: ${options.classification?.mood ?? "bright"}\n\n${JSON.stringify(options.archetypeStarter, null, 2)}\n`
       : "";
 
   const visionBlock = options?.hasVision
@@ -105,27 +135,15 @@ You are personalizing a curated design archetype, not inventing layout from scra
 **Verified social links:**
 ${socialBlock || "- none"}
 ${designBlock}${visionBlock}${currentTemplateBlock}
+${SECTION_TITLE_GUIDANCE}
+
 ## YOUR DESIGN PROCESS
 
 1. **Understand the person** — Read the bio for identity, passions, career, hobbies (e.g. football + mobile phones → athletic + tech-forward aesthetic; greens/blues; tags like "Football", "Mobile Tech").
 
-2. **Study the photos** — Match layout and mood to what's actually in the images.
+2. **Study the photos** — Match layout and mood to what's actually in the images. Let what you see inform the section titles you invent.
 
-3. **Persona-based section titles (REQUIRED — every creator should feel unique)** — Customize section titles to match who this person IS. Titles appear as headers on their public page.
-   - **gallery.title** — Must sound like a PHOTO area (visual, short, ~2–4 words). Examples by persona:
-     - Actor → "On Set", "Roles & Moments"
-     - Comedian → "On Stage", "Crowd Shots"
-     - Painter/artist → "The Studio", "Recent Work"
-     - Doctor → "In Practice", "At the Clinic"
-     - Athlete → "In Action", "Game Day"
-     - Sales/business pro → "At Work", "In the Field" — NEVER "Leadership & Engagements" or other résumé/LinkedIn headers for photos
-     - Student → "Life & Moments", "Campus Days"
-   - **bio.title** — Match their world: "The Story", "About the Artist", "Background", "About Me"
-   - **skills.title** — Match their craft: "Specialties", "The Craft", "Sound & Style", "Core Strengths", "Passions"
-   - Do NOT reuse generic titles across different niches when a persona-specific name fits better.
-   - Never use corporate résumé section names (Leadership, Engagements, Professional Summary, Work History) for gallery — gallery is always photos.
-
-4. **Write professional copy** — CRITICAL:
+3. **Write professional copy** — CRITICAL:
    - \`hero.subheadline\`: one punchy professional tagline (max ~120 chars) summarizing who they are.
    - \`bio.text\`: 2–4 polished sentences rewriting the raw bio. Fix grammar, tighten wording, keep every fact true. Do NOT invent credentials or experiences.
    - \`meta.tagline\`: same essence as subheadline, even shorter.
@@ -136,13 +154,13 @@ ${designBlock}${visionBlock}${currentTemplateBlock}
    - If brief says "not pink" / "no pink" → zero pink anywhere: not in palette.primary, not in hero gradient, not in CTA.
    - Sports + bright → light blue/sky background (#f0f9ff), green or blue accents.
 
-5. **Structure sections** — Keep the archetype's section order and types. Include: hero → social (if links) → gallery (all 3 photo URLs) → bio → skills (3–6 tags from bio interests) → cta.
+6. **Structure sections** — Keep the archetype's section order and types. Include: hero → social (if links) → gallery (all 3 photo URLs) → bio → skills (3–6 tags from bio interests) → cta.
 
-6. **Images** — Use exact photo URLs provided. Hero \`avatarUrl\` = photo_1.
+7. **Images** — Use exact photo URLs provided. Hero \`avatarUrl\` = photo_1.
    - Circular/round request: \`assets.avatarBorderRadius\` and \`assets.galleryImageBorderRadius\` = "50%", all gallery \`span\` = 1, omit \`caption\` on gallery images (no "Photo 2" labels).
    - Rounded corners: use "20px" or "24px".
 
-7. **Gallery rules** — No generic captions ("Photo 1", "Featured"). Either omit caption or write a short meaningful label tied to the image content.
+8. **Gallery rules** — No generic captions ("Photo 1", "Featured"). Either omit caption or write a short meaningful label tied to the image content.
 
 ## OUTPUT
 

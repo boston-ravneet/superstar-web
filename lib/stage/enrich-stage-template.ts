@@ -7,12 +7,6 @@ import { wantsCircularImages } from "@/lib/ai/design-theme";
 import { sanitizeSkillTags } from "@/lib/ai/bio-copy";
 import { DEFAULT_LAYOUT, DEFAULT_STYLE } from "@/lib/stage/template-defaults";
 import { buildCtaContent } from "@/lib/stage/resolve-connect-actions";
-import { classifyCreator } from "@/lib/ai/classify-creator";
-import {
-  resolveBioTitle,
-  resolveGalleryTitle,
-  resolveSkillsTitle,
-} from "@/lib/stage/persona-section-titles";
 
 export function normalizeBuilderInput(
   raw: unknown,
@@ -240,59 +234,6 @@ export function finalizeStageTemplate(
           label: cta.label,
           href: cta.href,
           actions: cta.actions,
-        },
-      };
-    }
-
-    return section;
-  });
-
-  const classification = classifyCreator(input);
-  sections = sections.map((section) => {
-    if (section.type === "gallery") {
-      return {
-        ...section,
-        content: {
-          ...section.content,
-          title: resolveGalleryTitle(
-            typeof section.content.title === "string"
-              ? section.content.title
-              : undefined,
-            classification,
-            input,
-          ),
-        },
-      };
-    }
-
-    if (section.type === "bio") {
-      return {
-        ...section,
-        content: {
-          ...section.content,
-          title: resolveBioTitle(
-            typeof section.content.title === "string"
-              ? section.content.title
-              : undefined,
-            classification,
-            input,
-          ),
-        },
-      };
-    }
-
-    if (section.type === "skills") {
-      return {
-        ...section,
-        content: {
-          ...section.content,
-          title: resolveSkillsTitle(
-            typeof section.content.title === "string"
-              ? section.content.title
-              : undefined,
-            classification,
-            input,
-          ),
         },
       };
     }

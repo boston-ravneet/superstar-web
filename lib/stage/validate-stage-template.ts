@@ -7,6 +7,7 @@ import type {
   ProfileBuilderInput,
   StageTemplateDocument,
 } from "@/lib/types/stage-template";
+import { isResumeStyleGalleryTitle } from "@/lib/stage/persona-section-titles";
 
 export interface TemplateValidationResult {
   valid: boolean;
@@ -55,6 +56,34 @@ export function validateStageTemplate(
 
   if (template.sections.length < 4) {
     issues.push("Template has too few sections");
+  }
+
+  const gallery = template.sections.find(
+    (section) => section.type === "gallery" && section.visible,
+  );
+  if (gallery) {
+    const galleryTitle = String(gallery.content.title ?? "").trim();
+    if (!galleryTitle) {
+      issues.push("Gallery section missing title");
+    } else if (isResumeStyleGalleryTitle(galleryTitle)) {
+      issues.push(
+        `Gallery title "${galleryTitle}" reads like a résumé header, not a photo section`,
+      );
+    }
+  }
+
+  const bio = template.sections.find(
+    (section) => section.type === "bio" && section.visible,
+  );
+  if (bio && !String(bio.content.title ?? "").trim()) {
+    issues.push("Bio section missing title");
+  }
+
+  const skills = template.sections.find(
+    (section) => section.type === "skills" && section.visible,
+  );
+  if (skills && !String(skills.content.title ?? "").trim()) {
+    issues.push("Skills section missing title");
   }
 
   return {
