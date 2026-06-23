@@ -4,6 +4,7 @@ import { combineDesignHints } from "@/lib/ai/design-theme";
 import { finalizeStageTemplate } from "@/lib/stage/enrich-stage-template";
 import { applyDesignThemeHints } from "@/lib/ai/design-theme";
 import { buildCtaContent } from "@/lib/stage/resolve-connect-actions";
+import { suggestPersonaSectionTitles } from "@/lib/stage/persona-section-titles";
 import {
   getArchetypeById,
   DEFAULT_ARCHETYPE_ID,
@@ -36,6 +37,7 @@ export function buildFromArchetype(
 
   const hints = combineDesignHints(input.designInstructions, refinePrompt);
   const template = cloneTemplate(archetype.base);
+  const personaTitles = suggestPersonaSectionTitles(classification, input);
 
   template.meta = {
     title: input.displayName,
@@ -89,7 +91,7 @@ export function buildFromArchetype(
         visible: images.length > 0,
         content: {
           ...section.content,
-          title: archetype.galleryTitle,
+          title: personaTitles.gallery,
           images,
         },
       };
@@ -101,6 +103,7 @@ export function buildFromArchetype(
         visible: Boolean(input.bio.trim()),
         content: {
           ...section.content,
+          title: personaTitles.bio,
           text: copy.about,
         },
       };
@@ -111,7 +114,7 @@ export function buildFromArchetype(
         ...section,
         visible: skillCandidates.length > 0,
         content: {
-          title: archetype.skillsTitle,
+          title: personaTitles.skills,
           tags: skillCandidates,
         },
       };

@@ -109,15 +109,29 @@ ${designBlock}${visionBlock}${currentTemplateBlock}
 
 1. **Understand the person** — Read the bio for identity, passions, career, hobbies (e.g. football + mobile phones → athletic + tech-forward aesthetic; greens/blues; tags like "Football", "Mobile Tech").
 
-2. **Study the photos** — Match layout and mood to what's actually in the images. Gallery title should fit the content (e.g. "On the field", "Training days") — not generic "Gallery".
+2. **Study the photos** — Match layout and mood to what's actually in the images.
 
-3. **Write professional copy** — CRITICAL:
+3. **Persona-based section titles (REQUIRED — every creator should feel unique)** — Customize section titles to match who this person IS. Titles appear as headers on their public page.
+   - **gallery.title** — Must sound like a PHOTO area (visual, short, ~2–4 words). Examples by persona:
+     - Actor → "On Set", "Roles & Moments"
+     - Comedian → "On Stage", "Crowd Shots"
+     - Painter/artist → "The Studio", "Recent Work"
+     - Doctor → "In Practice", "At the Clinic"
+     - Athlete → "In Action", "Game Day"
+     - Sales/business pro → "At Work", "In the Field" — NEVER "Leadership & Engagements" or other résumé/LinkedIn headers for photos
+     - Student → "Life & Moments", "Campus Days"
+   - **bio.title** — Match their world: "The Story", "About the Artist", "Background", "About Me"
+   - **skills.title** — Match their craft: "Specialties", "The Craft", "Sound & Style", "Core Strengths", "Passions"
+   - Do NOT reuse generic titles across different niches when a persona-specific name fits better.
+   - Never use corporate résumé section names (Leadership, Engagements, Professional Summary, Work History) for gallery — gallery is always photos.
+
+4. **Write professional copy** — CRITICAL:
    - \`hero.subheadline\`: one punchy professional tagline (max ~120 chars) summarizing who they are.
    - \`bio.text\`: 2–4 polished sentences rewriting the raw bio. Fix grammar, tighten wording, keep every fact true. Do NOT invent credentials or experiences.
    - \`meta.tagline\`: same essence as subheadline, even shorter.
    - Never paste the design brief or tweak text into visible copy.
 
-4. **Design the visual system** — Palette, gradients, and section styling must reflect bio themes + design brief.
+5. **Design the visual system** — Palette, gradients, and section styling must reflect bio themes + design brief.
    - If brief says blue / blur (typo) / navy → primary MUST be blue (#2563eb, #0284c7, #0ea5e9). NEVER pink/magenta/fuchsia (#db2777, #d946ef, #ec4899).
    - If brief says "not pink" / "no pink" → zero pink anywhere: not in palette.primary, not in hero gradient, not in CTA.
    - Sports + bright → light blue/sky background (#f0f9ff), green or blue accents.

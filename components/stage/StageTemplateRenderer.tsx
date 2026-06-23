@@ -11,10 +11,10 @@ import {
   collectGoogleFontFamilies,
 } from "@/lib/stage/google-fonts";
 import { StageViewTracker } from "@/components/stage/StageViewTracker";
+import { sanitizeGalleryTitleForDisplay } from "@/lib/stage/persona-section-titles";
 
 const COLLAPSIBLE_SECTION_TYPES = new Set([
   "bio",
-  "gallery",
   "skills",
   "highlights",
   "quote",
@@ -240,7 +240,9 @@ function GallerySection({
   onImageClick?: (url: string, alt: string) => void;
   compact?: boolean;
 }) {
-  const title = String(section.content.title ?? "Gallery");
+  const title = sanitizeGalleryTitleForDisplay(
+    String(section.content.title ?? "Photos"),
+  );
   const images = Array.isArray(section.content.images)
     ? (section.content.images as Array<{ url?: string; caption?: string; span?: number }>)
     : [];
