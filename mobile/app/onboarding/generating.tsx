@@ -1,5 +1,5 @@
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -8,104 +8,92 @@ import {
   Text,
   View,
 } from "react-native";
-import { submitProfileBuilder } from "@/lib/api/client";
+import { SimulatedVideoAd } from "@/components/ads/SimulatedVideoAd";
+import { BUILD_VIDEO_AD_COUNT } from "@/lib/ads/constants";
+import { useBuildCreationSession } from "@/lib/ads/use-build-creation-session";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { getOnboardingState } from "@/lib/state/onboarding";
 import { colors } from "@/constants/theme";
-
-const AD_MESSAGES = [
-  "Free tier is supported by creators like you.",
-  "Upgrade later for instant builds and no ads.",
-  "Your custom stage is being designed right now.",
-  "Tip: add extra details next time for richer layouts.",
-];
 
 export default function GeneratingScreen() {
   const router = useRouter();
   const { profileId } = useLocalSearchParams<{ profileId: string }>();
   const { sessionToken } = useAuth();
-  const [adIndex, setAdIndex] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-  const [statusText, setStatusText] = useState("Preparing your photos…");
-  const startedRef = useRef(false);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setAdIndex((current) => (current + 1) % AD_MESSAGES.length);
-    }, 4000);
+  const goToPreview = useCallback(() => {
+    router.replace({
+      pathname: "/onboarding/preview",
+      params: { profileId },
+    });
+  }, [profileId, router]);
 
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    async function runGeneration() {
-      if (startedRef.current || !profileId || !sessionToken) {
-        return;
-      }
-
-      startedRef.current = true;
-      const state = getOnboardingState();
-      const imageUrls = state.imagePublicUrls.filter(
-        (url): url is string => Boolean(url),
-      );
-
-      if (imageUrls.length !== 3) {
-        setError("Missing uploaded photos. Go back and try again.");
-        return;
-      }
-
-      try {
-        setStatusText("Designing your layout…");
-        await submitProfileBuilder(
-          {
-            profileId,
-            bio: state.bio,
-            designInstructions: state.designInstructions || undefined,
-            imageUrls,
-            preferredArchetypeId: state.preferredArchetypeId ?? undefined,
-          },
-          sessionToken,
-        );
-
-        router.replace({
-          pathname: "/onboarding/preview",
-          params: { profileId },
-        });
-      } catch (generationError) {
-        setError(
-          generationError instanceof Error
-            ? generationError.message
-            : "We could not build your stage.",
-        );
-      }
-    }
-
-    runGeneration();
-  }, [profileId, router, sessionToken]);
+  const {
+    phase,
+    adIndex,
+    adsCompleted,
+    adTotal,
+    aiMessage,
+    apiDone,
+    error,
+    completeVideoAd,
+  } = useBuildCreationSession({
+    profileId,
+    sessionToken,
+    onReady: goToPreview,
+  });
 
   return (
     <>
-      <Stack.Screen options={{ title: "Building your stage" }} />
+      <Stack.Screen options={{ title: "Building your stage", headerBackVisible: false }} />
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.eyebrow}>FREE TIER</Text>
-        <Text style={styles.title}>This takes about 5 minutes</Text>
+        <Text style={styles.title}>AI is building your profile</Text>
         <Text style={styles.body}>
-          Sit tight while we turn your bio and photos into a custom public page.
+          Our AI is reading your bio, studying your photos, and designing your
+          public page right now. Watch {BUILD_VIDEO_AD_COUNT} short videos to
+          support the free plan.
         </Text>
 
-        <View style={styles.adCard}>
-          <Text style={styles.adLabel}>Sponsored</Text>
-          <Text style={styles.adTitle}>Superstar Free</Text>
-          <Text style={styles.adBody}>{AD_MESSAGES[adIndex]}</Text>
-          <View style={styles.adPlaceholder}>
-            <Text style={styles.adPlaceholderText}>Ad placement</Text>
+        <View style={styles.aiCard}>
+          <View style={styles.aiHeader}>
+            <ActivityIndicator color={colors.fuchsia} size="small" />
+            <Text style={styles.aiLabel}>AI design in progress</Text>
           </View>
+          <Text style={styles.aiMessage}>{aiMessage}</Text>
+          <Text style={styles.aiHint}>
+            {apiDone
+              ? "Design complete — finishing your sponsored videos…"
+              : "This usually takes about 90 seconds on our servers."}
+          </Text>
         </View>
 
-        <View style={styles.progressCard}>
-          <ActivityIndicator color={colors.fuchsia} />
-          <Text style={styles.progressText}>{statusText}</Text>
-        </View>
+        {phase === "video-ad" ? (
+          <SimulatedVideoAd
+            slot={adIndex + 1}
+            total={adTotal}
+            active
+            onComplete={() => completeVideoAd("completed")}
+          />
+        ) : null}
+
+        {phase === "intro" || phase === "ai-working" ? (
+          <View style={styles.betweenAdsCard}>
+            <Text style={styles.betweenAdsTitle}>
+              {phase === "intro" ? "Getting started…" : "AI still working…"}
+            </Text>
+            <Text style={styles.betweenAdsBody}>
+              {adsCompleted > 0
+                ? `${adsCompleted} of ${adTotal} videos complete. Next video starting…`
+                : "Your custom stage is being generated in the background."}
+            </Text>
+          </View>
+        ) : null}
+
+        {phase === "finishing" ? (
+          <View style={styles.progressCard}>
+            <ActivityIndicator color={colors.fuchsia} />
+            <Text style={styles.progressText}>Opening your preview…</Text>
+          </View>
+        ) : null}
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -143,45 +131,53 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: 16,
     lineHeight: 24,
-    marginBottom: 24,
-  },
-  adCard: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    padding: 18,
     marginBottom: 20,
   },
-  adLabel: {
-    color: colors.muted,
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    marginBottom: 6,
+  aiCard: {
+    borderWidth: 1,
+    borderColor: `${colors.fuchsia}55`,
+    backgroundColor: `${colors.fuchsia}12`,
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 20,
+    gap: 8,
   },
-  adTitle: {
+  aiHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  aiLabel: {
     color: colors.text,
     fontWeight: "700",
-    fontSize: 18,
-    marginBottom: 8,
+    fontSize: 14,
   },
-  adBody: {
+  aiMessage: {
+    color: colors.text,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  aiHint: {
     color: colors.muted,
-    lineHeight: 20,
-    marginBottom: 14,
+    fontSize: 13,
+    lineHeight: 18,
   },
-  adPlaceholder: {
-    height: 120,
-    borderRadius: 14,
+  betweenAdsCard: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderStyle: "dashed",
-    alignItems: "center",
-    justifyContent: "center",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    backgroundColor: colors.surface,
   },
-  adPlaceholderText: {
+  betweenAdsTitle: {
+    color: colors.text,
+    fontWeight: "700",
+    marginBottom: 6,
+  },
+  betweenAdsBody: {
     color: colors.muted,
+    lineHeight: 20,
   },
   progressCard: {
     alignItems: "center",

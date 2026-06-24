@@ -25,42 +25,34 @@ export function validateRegistrationPayload(
     };
   }
 
-  if (!payload.oauth?.provider) {
-    return {
-      valid: false,
-      normalizedUsername: usernameResult.normalized,
-      isLocked: false,
-      error: "An Instagram or TikTok OAuth identity is required.",
-      code: "OAUTH_PROVIDER_REQUIRED",
-    };
-  }
+  if (payload.oauth?.provider) {
+    if (
+      payload.oauth.provider !== "instagram" &&
+      payload.oauth.provider !== "tiktok"
+    ) {
+      return {
+        valid: false,
+        normalizedUsername: usernameResult.normalized,
+        isLocked: false,
+        error: "Only Instagram and TikTok OAuth providers are supported.",
+        code: "OAUTH_PROVIDER_UNSUPPORTED",
+      };
+    }
 
-  if (
-    payload.oauth.provider !== "instagram" &&
-    payload.oauth.provider !== "tiktok"
-  ) {
-    return {
-      valid: false,
-      normalizedUsername: usernameResult.normalized,
-      isLocked: false,
-      error: "Only Instagram and TikTok OAuth providers are supported.",
-      code: "OAUTH_PROVIDER_UNSUPPORTED",
-    };
-  }
+    const oauthResult = validateOAuthHandleMatch(
+      usernameResult.normalized,
+      payload.oauth,
+    );
 
-  const oauthResult = validateOAuthHandleMatch(
-    usernameResult.normalized,
-    payload.oauth,
-  );
-
-  if (!oauthResult.valid) {
-    return {
-      valid: false,
-      normalizedUsername: usernameResult.normalized,
-      isLocked: false,
-      error: oauthResult.error,
-      code: oauthResult.code,
-    };
+    if (!oauthResult.valid) {
+      return {
+        valid: false,
+        normalizedUsername: usernameResult.normalized,
+        isLocked: false,
+        error: oauthResult.error,
+        code: oauthResult.code,
+      };
+    }
   }
 
   return {

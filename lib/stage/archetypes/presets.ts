@@ -68,10 +68,32 @@ const sharedSections = {
     style: DEFAULT_STYLE,
     content: { instagramHandle: null, tiktokHandle: null },
   },
+  showreel: (title: string) => ({
+    id: "showreel",
+    type: "showreel" as const,
+    order: 2,
+    visible: false,
+    layout: {
+      ...DEFAULT_LAYOUT,
+      direction: "column" as const,
+      gap: "16px",
+      padding: "0 24px 20px",
+    },
+    style: DEFAULT_STYLE,
+    content: {
+      title,
+      videos: [] as Array<{
+        url: string;
+        embedUrl: string;
+        provider: string;
+        title?: string;
+      }>,
+    },
+  }),
   gallery: (title: string, columns: number, padding: string) => ({
     id: "gallery",
     type: "gallery" as const,
-    order: 2,
+    order: 3,
     visible: true,
     layout: {
       ...DEFAULT_LAYOUT,
@@ -86,7 +108,7 @@ const sharedSections = {
   bio: (surface: string, border: string) => ({
     id: "bio",
     type: "bio" as const,
-    order: 3,
+    order: 4,
     visible: true,
     layout: { ...DEFAULT_LAYOUT, align: "start" as const, padding: "24px" },
     style: {
@@ -101,7 +123,7 @@ const sharedSections = {
   skills: (title: string) => ({
     id: "skills",
     type: "skills" as const,
-    order: 4,
+    order: 5,
     visible: true,
     layout: {
       ...DEFAULT_LAYOUT,
@@ -115,7 +137,7 @@ const sharedSections = {
   cta: (bg: string, border: string, label: string) => ({
     id: "cta",
     type: "cta" as const,
-    order: 5,
+    order: 6,
     visible: true,
     layout: { ...DEFAULT_LAYOUT, padding: "8px 24px 48px" },
     style: {
@@ -178,14 +200,18 @@ export const STAGE_ARCHETYPES: StageArchetype[] = [
           "linear-gradient(180deg, rgba(37,99,235,0.12) 0%, transparent 100%)",
         ),
         sharedSections.social,
+        sharedSections.showreel("Showreel & Trailers"),
         sharedSections.gallery("In action", 3, "0 24px 20px"),
-        sharedSections.bio("rgba(255,255,255,0.95)", "rgba(203,213,225,0.9)"),
-        sharedSections.skills("Passions"),
-        sharedSections.cta(
-          "linear-gradient(135deg, rgba(37,99,235,0.14), rgba(5,150,105,0.12))",
-          "rgba(37,99,235,0.35)",
-          "Let's connect",
-        ),
+        { ...sharedSections.bio("rgba(255,255,255,0.95)", "rgba(203,213,225,0.9)"), order: 4 },
+        { ...sharedSections.skills("Passions"), order: 5 },
+        {
+          ...sharedSections.cta(
+            "linear-gradient(135deg, rgba(37,99,235,0.14), rgba(5,150,105,0.12))",
+            "rgba(37,99,235,0.35)",
+            "Let's connect",
+          ),
+          order: 6,
+        },
       ],
     },
   },
@@ -238,16 +264,17 @@ export const STAGE_ARCHETYPES: StageArchetype[] = [
         ),
         sharedSections.quote("rgba(17,24,39,0.85)", "rgba(34,211,238,0.35)"),
         { ...sharedSections.social, order: 2 },
-        { ...sharedSections.gallery("Highlights", 2, "0 24px 24px"), order: 3 },
-        { ...sharedSections.bio("rgba(17,24,39,0.92)", "rgba(51,65,85,0.9)"), order: 4 },
-        { ...sharedSections.skills("Focus areas"), order: 5 },
+        { ...sharedSections.showreel("Showreel & Trailers"), order: 3 },
+        { ...sharedSections.gallery("Highlights", 2, "0 24px 24px"), order: 4 },
+        { ...sharedSections.bio("rgba(17,24,39,0.92)", "rgba(51,65,85,0.9)"), order: 5 },
+        { ...sharedSections.skills("Focus areas"), order: 6 },
         {
           ...sharedSections.cta(
             "linear-gradient(135deg, rgba(34,211,238,0.18), rgba(56,189,248,0.12))",
             "rgba(34,211,238,0.4)",
             "Work with me",
           ),
-          order: 6,
+          order: 7,
         },
       ],
     },
@@ -301,16 +328,17 @@ export const STAGE_ARCHETYPES: StageArchetype[] = [
           "56px 24px 32px",
         ),
         { ...sharedSections.bio("rgba(255,255,255,0.98)", "rgba(228,228,231,0.95)"), order: 1 },
-        { ...sharedSections.gallery("Portfolio", 1, "0 24px 32px"), order: 2 },
-        { ...sharedSections.skills("Expertise"), order: 3 },
-        { ...sharedSections.social, order: 4 },
+        { ...sharedSections.showreel("Showreel & Trailers"), order: 2 },
+        { ...sharedSections.gallery("Portfolio", 1, "0 24px 32px"), order: 3 },
+        { ...sharedSections.skills("Expertise"), order: 4 },
+        { ...sharedSections.social, order: 5 },
         {
           ...sharedSections.cta(
             "rgba(24,24,27,0.04)",
             "rgba(228,228,231,1)",
             "Get in touch",
           ),
-          order: 5,
+          order: 6,
         },
       ],
     },
@@ -364,16 +392,17 @@ export const STAGE_ARCHETYPES: StageArchetype[] = [
           "52px 24px 36px",
         ),
         { ...sharedSections.social, order: 1 },
-        { ...sharedSections.bio("rgba(28,25,23,0.94)", "rgba(68,64,60,0.85)"), order: 2 },
-        { ...sharedSections.gallery("Selected work", 2, "0 24px 28px"), order: 3 },
-        { ...sharedSections.skills("Signature"), order: 4 },
+        { ...sharedSections.showreel("Showreel & Trailers"), order: 2 },
+        { ...sharedSections.bio("rgba(28,25,23,0.94)", "rgba(68,64,60,0.85)"), order: 3 },
+        { ...sharedSections.gallery("Selected work", 2, "0 24px 28px"), order: 4 },
+        { ...sharedSections.skills("Signature"), order: 5 },
         {
           ...sharedSections.cta(
             "linear-gradient(135deg, rgba(245,158,11,0.2), rgba(251,191,36,0.1))",
             "rgba(245,158,11,0.45)",
             "Book now",
           ),
-          order: 5,
+          order: 6,
         },
       ],
     },

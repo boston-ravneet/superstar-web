@@ -4,6 +4,7 @@ export type StageSectionType =
   | "hero"
   | "bio"
   | "gallery"
+  | "showreel"
   | "highlights"
   | "skills"
   | "quote"
@@ -37,6 +38,8 @@ export interface StageTemplateCanvas {
   background: string;
   backgroundGradientTo?: string;
   padding: string;
+  /** CSS-only decorative overlay preset (clouds, film grain, spotlight, etc.). */
+  motif?: import("@/lib/stage/canvas-motifs").CanvasMotifId;
 }
 
 export interface StageSectionLayout {
@@ -93,6 +96,8 @@ export interface ProfileBuilderInput {
   /** Private LLM styling notes — never shown on the public page. */
   designInstructions?: string;
   imageUrls: string[];
+  /** Structured media — headshot, showreel links, portfolio gallery. */
+  media?: import("@/lib/stage/builder-media").BuilderMediaInput;
   displayName: string;
   username: string;
   instagramHandle?: string | null;
@@ -101,6 +106,8 @@ export interface ProfileBuilderInput {
   preferredArchetypeId?: import("@/lib/stage/archetypes/types").ArchetypeId;
   /** Which bio copy is shown on the stage page. */
   bioDisplayMode?: "polished" | "original";
+  /** Saved social handles (optional Verify in a later phase). */
+  socialAccounts?: import("@/lib/stage/social-accounts").SocialAccount[];
   /** AI-polished about text (saved after generation). */
   polishedBio?: string;
   /** AI-polished hero tagline (saved after generation). */
@@ -120,6 +127,8 @@ export interface BuilderSubmitPayload {
   extraDetails?: string;
   imageUrls: string[];
   preferredArchetypeId?: import("@/lib/stage/archetypes/types").ArchetypeId;
+  socialAccounts?: import("@/lib/stage/social-accounts").SocialAccount[];
+  media?: import("@/lib/stage/builder-media").BuilderMediaInput;
 }
 
 export interface BuilderRefinePayload {

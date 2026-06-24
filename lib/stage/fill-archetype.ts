@@ -3,7 +3,17 @@ import { summarizeBioProfessionally, sanitizeSkillTags } from "@/lib/ai/bio-copy
 import { combineDesignHints } from "@/lib/ai/design-theme";
 import { finalizeStageTemplate } from "@/lib/stage/enrich-stage-template";
 import { applyDesignThemeHints } from "@/lib/ai/design-theme";
+import { applyCanvasMotif } from "@/lib/stage/canvas-motifs";
 import { buildCtaContent } from "@/lib/stage/resolve-connect-actions";
+import {
+  normalizeSocialAccounts,
+  socialAccountsToBuilderHandles,
+} from "@/lib/stage/social-accounts";
+import {
+  builderHeadshotUrl,
+  portfolioGalleryImages,
+  showreelSectionVideos,
+} from "@/lib/stage/media-sections";
 import {
   getArchetypeById,
   DEFAULT_ARCHETYPE_ID,
@@ -42,9 +52,6 @@ export function buildFromArchetype(
     tagline: copy.tagline,
   };
 
-  const circular =
-    template.assets?.galleryImageBorderRadius === "50%";
-
   template.sections = template.sections.map((section) => {
     if (section.type === "hero") {
       return {
@@ -54,35 +61,47 @@ export function buildFromArchetype(
           headline: input.displayName,
           handle: input.username,
           subheadline: copy.tagline,
-          avatarUrl: input.imageUrls[0] ?? "",
+          avatarUrl: builderHeadshotUrl(input),
         },
       };
     }
 
     if (section.type === "social") {
-      const hasSocial = input.instagramHandle || input.tiktokHandle;
+      const accounts = normalizeSocialAccounts(input.socialAccounts ?? []);
+      const legacy = socialAccountsToBuilderHandles(accounts);
       return {
         ...section,
-        visible: Boolean(hasSocial),
+        visible: accounts.length > 0,
         content: {
-          instagramHandle: input.instagramHandle ?? null,
-          tiktokHandle: input.tiktokHandle ?? null,
+          accounts: accounts.map((account) => ({
+            platform: account.platform,
+            handle: account.handle,
+            verified: Boolean(account.verified),
+          })),
+          instagramHandle: legacy.instagramHandle ?? null,
+          tiktokHandle: legacy.tiktokHandle ?? null,
+        },
+      };
+    }
+
+    if (section.type === "showreel") {
+      const videos = showreelSectionVideos(input);
+      return {
+        ...section,
+        visible: videos.length > 0,
+        content: {
+          ...section.content,
+          title: String(section.content.title ?? "Showreel & Trailers"),
+          videos,
         },
       };
     }
 
     if (section.type === "gallery") {
       const isGoldLedger = classification.archetypeId === "gold-ledger";
-      const images = input.imageUrls.map((url, index) => ({
-        url,
-        span: circular
-          ? 1
-          : isGoldLedger && index === 0
-            ? 2
-            : index === 0
-              ? 2
-              : 1,
-      }));
+      const images = portfolioGalleryImages(input, hints, {
+        firstImageSpan: isGoldLedger ? 2 : 2,
+      });
 
       return {
         ...section,
@@ -144,5 +163,6 @@ export function buildFromArchetype(
   });
 
   const themed = applyDesignThemeHints(template, hints);
-  return finalizeStageTemplate(themed, input, hints);
+  const withMotif = applyCanvasMotif(themed, input, classification, hints);
+  return finalizeStageTemplate(withMotif, input, hints);
 }

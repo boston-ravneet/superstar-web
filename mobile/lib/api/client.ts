@@ -146,7 +146,9 @@ export async function submitProfileBuilder(
     designInstructions?: string;
     extraDetails?: string;
     imageUrls: string[];
+    media?: import("@/lib/media/build-payload").BuilderMediaPayload;
     preferredArchetypeId?: string;
+    socialAccounts?: import("@/lib/social/accounts").SocialAccount[];
   },
   sessionToken: string,
 ) {
@@ -187,10 +189,12 @@ export async function fetchBuilderStatus(profileId: string, sessionToken: string
     builderInput: {
       bio: string;
       designInstructions?: string;
-    extraDetails?: string;
+      extraDetails?: string;
       imageUrls: string[];
+      media?: import("@/lib/media/build-payload").BuilderMediaPayload;
       displayName: string;
       username: string;
+      socialAccounts?: import("@/lib/social/accounts").SocialAccount[];
     } | null;
     previewUrl: string | null;
     publicUrl: string | null;

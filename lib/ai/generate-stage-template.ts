@@ -12,13 +12,22 @@ import { fetchImagePartsForGemini } from "@/lib/ai/fetch-image-parts";
 import { classifyCreator } from "@/lib/ai/classify-creator";
 import { buildFromArchetype } from "@/lib/stage/fill-archetype";
 import type { CreatorClassification } from "@/lib/stage/archetypes";
+import {
+  normalizeSocialAccounts,
+  SOCIAL_PLATFORM_LABELS,
+} from "@/lib/stage/social-accounts";
+import { applyCanvasMotif } from "@/lib/stage/canvas-motifs";
 import { validateStageTemplate } from "@/lib/stage/validate-stage-template";
+import {
+  resolveBuilderMedia,
+  visionImageUrlsFromMedia,
+} from "@/lib/stage/builder-media";
 
 const GEMINI_MODEL = "gemini-2.5-flash";
 
 const SECTION_TITLE_GUIDANCE = `## SECTION TITLES — YOU DECIDE (required)
 
-Invent fresh, persona-specific titles for \`gallery.title\`, \`bio.title\`, and \`skills.title\`.
+Invent fresh, persona-specific titles for \`gallery.title\`, \`showreel.title\`, \`bio.title\`, and \`skills.title\`.
 Do NOT copy archetype placeholder titles verbatim. Do NOT use generic LinkedIn/résumé headers.
 Each creator's page should feel unique — a comedian and a doctor should never share the same section names.
 
@@ -50,7 +59,7 @@ const STAGE_TEMPLATE_SCHEMA = `{
   "version": 2,
   "tier": "free",
   "meta": { "title": "display name", "tagline": "one professional line summarizing who they are" },
-  "canvas": { "maxWidth": "720px", "minHeight": "100vh", "backgroundType": "solid|gradient", "background": "#hex", "backgroundGradientTo": "#hex", "padding": "0" },
+  "canvas": { "maxWidth": "720px", "minHeight": "100vh", "backgroundType": "solid|gradient", "background": "#hex", "backgroundGradientTo": "#hex", "padding": "0", "motif": "none|film-grain|spotlight|sky-earth|soft-bokeh|stage-lights|tech-grid|sport-stripe|warm-glow" },
   "palette": { "primary": "#hex", "secondary": "#hex", "accent": "#hex", "text": "#hex", "muted": "#hex", "surface": "#hex", "border": "#hex" },
   "typography": { "headingFont": "system-ui, sans-serif", "bodyFont": "system-ui, sans-serif", "headingWeight": 800, "bodyWeight": 400, "headingSize": "2.5rem", "bodySize": "1rem", "lineHeight": 1.6 },
   "assets": { "avatarBorderRadius": "50%|24px|20px|0", "galleryImageBorderRadius": "50%|24px|20px|0" },
@@ -60,6 +69,7 @@ const STAGE_TEMPLATE_SCHEMA = `{
 Section types and content:
 - hero: { headline, handle, subheadline, avatarUrl, showBadge }
 - social: { instagramHandle, tiktokHandle }
+- showreel: { title: "persona-specific video section name YOU invent", videos: [{ url, embedUrl, provider, title? }] }
 - gallery: { title: "persona-specific photo section name YOU invent", images: [{ url, caption?, span: 1 }] }
 - bio: { title: "persona-specific bio section name YOU invent", text }
 - skills: { title: "persona-specific skills section name YOU invent", tags: string[] }
@@ -88,19 +98,46 @@ function buildPrompt(
     archetypeStarter?: StageTemplateDocument;
   },
 ): string {
-  const images = input.imageUrls
-    .map(
-      (url, index) =>
-        `- photo_${index + 1}${index === 0 ? " (hero avatar)" : ""}: ${url}`,
-    )
-    .join("\n");
+  const media = resolveBuilderMedia(input);
+  const headshot = media.headshotUrl?.trim();
+  const portfolio = media.portfolioImages
+    .map((entry) => entry.url?.trim())
+    .filter(Boolean);
+  const showreel = media.showreelVideos
+    .map((entry) => entry.url?.trim())
+    .filter(Boolean);
 
-  const socialBlock = [
-    input.instagramHandle ? `- instagram: @${input.instagramHandle}` : null,
-    input.tiktokHandle ? `- tiktok: @${input.tiktokHandle}` : null,
+  const images = [
+    headshot ? `- photo_1 (profile headshot / hero avatar): ${headshot}` : null,
+    ...portfolio.map(
+      (url, index) => `- portfolio_${index + 1}: ${url}`,
+    ),
   ]
     .filter(Boolean)
     .join("\n");
+
+  const showreelBlock =
+    showreel.length > 0
+      ? `\n**Showreel / trailer links (embed only — do NOT upload video files):**\n${showreel
+          .map((url, index) => `- showreel_${index + 1}: ${url}`)
+          .join("\n")}\n`
+      : "";
+
+  const socialAccounts = normalizeSocialAccounts(input.socialAccounts ?? []);
+  const socialBlock =
+    socialAccounts.length > 0
+      ? socialAccounts
+          .map(
+            (account) =>
+              `- ${SOCIAL_PLATFORM_LABELS[account.platform]}: ${account.handle}${account.verified ? " (verified)" : ""}`,
+          )
+          .join("\n")
+      : [
+          input.instagramHandle ? `- instagram: @${input.instagramHandle}` : null,
+          input.tiktokHandle ? `- tiktok: @${input.tiktokHandle}` : null,
+        ]
+          .filter(Boolean)
+          .join("\n");
 
   const refineBlock = options?.refinePrompt
     ? `\n## TWEAK REQUEST\nApply these design changes. Never show this text on the page:\n${options.refinePrompt}\n`
@@ -117,7 +154,7 @@ function buildPrompt(
       : "";
 
   const visionBlock = options?.hasVision
-    ? `\n## PHOTOS ATTACHED\nYou can SEE photo_1, photo_2, photo_3 as images above. Study them: subjects, setting, colors, mood, sports/tech cues. Let what you see drive gallery title, palette accents, and layout feel.\n`
+    ? `\n## PHOTOS ATTACHED\nYou can SEE the headshot and portfolio images above. Study them: subjects, setting, colors, mood, sports/tech cues. Let what you see drive gallery title, palette accents, and layout feel.\n`
     : `\n## PHOTOS (URLs only — infer from bio + brief)\n${images}\n`;
 
   return `You are an elite mobile web designer building a creator portfolio page ("stage") for Superstar.
@@ -134,7 +171,7 @@ You are personalizing a curated design archetype, not inventing layout from scra
 
 **Verified social links:**
 ${socialBlock || "- none"}
-${designBlock}${visionBlock}${currentTemplateBlock}
+${showreelBlock}${designBlock}${visionBlock}${currentTemplateBlock}
 ${SECTION_TITLE_GUIDANCE}
 
 ## YOUR DESIGN PROCESS
@@ -149,14 +186,27 @@ ${SECTION_TITLE_GUIDANCE}
    - \`meta.tagline\`: same essence as subheadline, even shorter.
    - Never paste the design brief or tweak text into visible copy.
 
-5. **Design the visual system** — Palette, gradients, and section styling must reflect bio themes + design brief.
+5. **Design the visual system** — Palette, gradients, and section styling must reflect bio themes + design brief + photo colors when you can see them.
+   - Pick \`palette\` colors that match the person's world (e.g. warm golds for actor headshots, clinic blues for doctor, field greens for athlete).
+   - Set \`canvas.background\` / \`backgroundGradientTo\` to a gradient that fits their vibe — not generic gray.
+   - Set \`canvas.motif\` for a CSS decorative overlay (never visible text):
+     - \`film-grain\` — actor, cinema, dark dramatic
+     - \`spotlight\` — performer, comedian, stage presence
+     - \`sky-earth\` — nature, outdoors, sky + green / earth briefs
+     - \`soft-bokeh\` — fashion, portraits, music, luxury
+     - \`stage-lights\` — musician, DJ, dark concert vibe
+     - \`tech-grid\` — developer, gaming, tech
+     - \`sport-stripe\` — athlete, sports energy
+     - \`warm-glow\` — friendly general / student pages
+     - \`none\` — only if minimal clean with no texture
    - If brief says blue / blur (typo) / navy → primary MUST be blue (#2563eb, #0284c7, #0ea5e9). NEVER pink/magenta/fuchsia (#db2777, #d946ef, #ec4899).
    - If brief says "not pink" / "no pink" → zero pink anywhere: not in palette.primary, not in hero gradient, not in CTA.
+   - If brief mentions sky + green / nature / earth / two colors for sky and ground → canvas gradient sky blue (#e0f2fe) fading to soft green (#dcfce7); primary sky blue (#0ea5e9), secondary earth green (#22c55e).
    - Sports + bright → light blue/sky background (#f0f9ff), green or blue accents.
 
-6. **Structure sections** — Keep the archetype's section order and types. Include: hero → social (if links) → gallery (all 3 photo URLs) → bio → skills (3–6 tags from bio interests) → cta.
+6. **Structure sections** — Keep the archetype's section order and types. Include: hero → social (if links) → showreel (if video links provided) → gallery (portfolio photo URLs only — NOT the headshot) → bio → skills (3–6 tags from bio interests) → cta.
 
-7. **Images** — Use exact photo URLs provided. Hero \`avatarUrl\` = photo_1.
+7. **Images & video** — Hero \`avatarUrl\` = headshot URL only. Gallery uses portfolio URLs (4–6 images). Showreel section uses provided YouTube/Vimeo/TikTok links with parsed \`embedUrl\` and \`provider\`; hide showreel when no links.
    - Circular/round request: \`assets.avatarBorderRadius\` and \`assets.galleryImageBorderRadius\` = "50%", all gallery \`span\` = 1, omit \`caption\` on gallery images (no "Photo 2" labels).
    - Rounded corners: use "20px" or "24px".
 
@@ -272,11 +322,13 @@ async function callGemini(apiKey: string, parts: GeminiPart[]): Promise<string> 
 function postProcessTemplate(
   template: StageTemplateDocument,
   input: ProfileBuilderInput,
+  classification: CreatorClassification,
   refinePrompt?: string,
 ): StageTemplateDocument {
   const hints = combineDesignHints(input.designInstructions, refinePrompt);
   const themed = applyDesignThemeHints(template, hints);
-  return finalizeStageTemplate(themed, input, hints);
+  const withMotif = applyCanvasMotif(themed, input, classification, hints);
+  return finalizeStageTemplate(withMotif, input, hints);
 }
 
 export async function generateStageTemplate(
@@ -313,6 +365,7 @@ export async function generateStageTemplate(
     const template = postProcessTemplate(
       archetypeStarter,
       input,
+      classification,
       options?.refinePrompt,
     );
     logStageGeneration("generation_result", {
@@ -341,7 +394,9 @@ export async function generateStageTemplate(
   });
 
   try {
-    const imageParts = await fetchImagePartsForGemini(input.imageUrls);
+    const imageParts = await fetchImagePartsForGemini(
+      visionImageUrlsFromMedia(resolveBuilderMedia(input)),
+    );
     const hasVision = imageParts.length > 0;
 
     const prompt = buildPrompt(input, {
@@ -366,6 +421,7 @@ export async function generateStageTemplate(
       const template = postProcessTemplate(
         archetypeStarter,
         input,
+        classification,
         options?.refinePrompt,
       );
       return {
@@ -390,6 +446,7 @@ export async function generateStageTemplate(
       const template = postProcessTemplate(
         archetypeStarter,
         input,
+        classification,
         options?.refinePrompt,
       );
       return {
@@ -399,7 +456,12 @@ export async function generateStageTemplate(
       };
     }
 
-    const finalTemplate = postProcessTemplate(parsed, input, options?.refinePrompt);
+    const finalTemplate = postProcessTemplate(
+      parsed,
+      input,
+      classification,
+      options?.refinePrompt,
+    );
 
     logStageGeneration("generation_success", {
       source: "gemini",
@@ -424,6 +486,7 @@ export async function generateStageTemplate(
     const template = postProcessTemplate(
       archetypeStarter,
       input,
+      classification,
       options?.refinePrompt,
     );
     return {

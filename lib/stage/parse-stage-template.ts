@@ -8,6 +8,7 @@ import type {
   StageTemplateSection,
   StageTemplateTypography,
 } from "@/lib/types/stage-template";
+import { parseCanvasMotif } from "@/lib/stage/canvas-motifs";
 import { DEFAULT_LAYOUT, DEFAULT_STYLE } from "@/lib/stage/template-defaults";
 import { classifyCreator } from "@/lib/ai/classify-creator";
 import { buildFromArchetype } from "@/lib/stage/fill-archetype";
@@ -77,6 +78,7 @@ function parseSection(raw: unknown, index: number): StageTemplateSection | null 
     "hero",
     "bio",
     "gallery",
+    "showreel",
     "highlights",
     "skills",
     "quote",
@@ -205,6 +207,7 @@ function parseCanvas(raw: unknown): StageTemplateCanvas {
       64,
     ),
     padding: clampString(value.padding, fallback.padding, 32),
+    motif: parseCanvasMotif(value.motif),
   };
 }
 

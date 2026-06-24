@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { KeyboardAwareScreen } from "@/components/KeyboardAwareScreen";
+import { SocialHandleFields } from "@/components/SocialHandleFields";
 import { ARCHETYPE_OPTIONS, type ArchetypeId } from "@/constants/archetypes";
 import {
   registerProfile,
@@ -21,9 +22,22 @@ import {
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { compressImageToWebp } from "@/lib/image/compressWebp";
 import {
+  PORTFOLIO_MAX,
+  PORTFOLIO_MIN,
+  PORTFOLIO_SLOT_COUNT,
+  type PortfolioSlots,
+} from "@/lib/media/constants";
+import { validateMediaState } from "@/lib/media/build-payload";
+import { isValidShowreelUrl } from "@/lib/media/showreel-url";
+import {
   getOnboardingState,
   patchOnboardingState,
 } from "@/lib/state/onboarding";
+import {
+  patchSocialDraft,
+  socialAccountsFromDrafts,
+  type SocialHandleDrafts,
+} from "@/lib/social/accounts";
 import { colors } from "@/constants/theme";
 
 function isRemoteUrl(uri: string): boolean {
@@ -41,11 +55,16 @@ export default function BuildStageScreen() {
   );
   const [preferredArchetypeId, setPreferredArchetypeId] =
     useState<ArchetypeId | null>(initial.preferredArchetypeId);
-  const [imageUris, setImageUris] = useState(initial.imageUris);
+  const [socialHandleDrafts, setSocialHandleDrafts] = useState<SocialHandleDrafts>(
+    initial.socialHandleDrafts,
+  );
+  const [headshotUri, setHeadshotUri] = useState(initial.headshotUri);
+  const [showreelUrls, setShowreelUrls] = useState(initial.showreelUrls);
+  const [portfolioUris, setPortfolioUris] = useState(initial.portfolioUris);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function pickImage(index: 0 | 1 | 2) {
+  async function pickHeadshot() {
     setError(null);
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
@@ -65,10 +84,41 @@ export default function BuildStageScreen() {
     }
 
     const compressed = await compressImageToWebp(result.assets[0].uri);
-    const next = [...imageUris] as typeof imageUris;
+    setHeadshotUri(compressed.uri);
+    patchOnboardingState({ headshotUri: compressed.uri });
+  }
+
+  async function pickPortfolioImage(index: number) {
+    setError(null);
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setError("Photo library permission is required.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    if (result.canceled || !result.assets[0]) {
+      return;
+    }
+
+    const compressed = await compressImageToWebp(result.assets[0].uri);
+    const next = [...portfolioUris] as PortfolioSlots;
     next[index] = compressed.uri;
-    setImageUris(next);
-    patchOnboardingState({ imageUris: next });
+    setPortfolioUris(next);
+    patchOnboardingState({ portfolioUris: next });
+  }
+
+  function updateShowreelUrl(index: 0 | 1, value: string) {
+    const next: [string, string] = [...showreelUrls];
+    next[index] = value;
+    setShowreelUrls(next);
+    patchOnboardingState({ showreelUrls: next });
   }
 
   async function handleContinue() {
@@ -79,8 +129,8 @@ export default function BuildStageScreen() {
     const state = getOnboardingState();
     const editing = state.mode === "edit" && Boolean(state.profileId);
 
-    if (!editing && (!state.username || !state.oauth)) {
-      setError("Missing handle or verification.");
+    if (!editing && !state.username) {
+      setError("Missing handle.");
       setSubmitting(false);
       return;
     }
@@ -97,10 +147,24 @@ export default function BuildStageScreen() {
       return;
     }
 
-    if (imageUris.some((uri) => !uri)) {
-      setError("Please upload all 3 photos.");
+    const mediaError = validateMediaState({
+      ...state,
+      bio: bio.trim(),
+      headshotUri,
+      portfolioUris,
+    });
+    if (mediaError) {
+      setError(mediaError);
       setSubmitting(false);
       return;
+    }
+
+    for (const url of showreelUrls) {
+      if (url.trim() && !isValidShowreelUrl(url)) {
+        setError("Showreel links must be YouTube, Vimeo, or TikTok URLs.");
+        setSubmitting(false);
+        return;
+      }
     }
 
     if (!sessionToken) {
@@ -111,6 +175,7 @@ export default function BuildStageScreen() {
 
     try {
       let profileId = state.profileId;
+      const socialAccounts = socialAccountsFromDrafts(socialHandleDrafts);
 
       if (!profileId) {
         const registration = await registerProfile(
@@ -118,21 +183,41 @@ export default function BuildStageScreen() {
             username: state.username,
             displayName: state.displayName || state.username,
             bio: bio.trim(),
-            oauth: state.oauth!,
+            socialAccounts,
           },
           sessionToken,
         );
         profileId = registration.profile.id;
       }
 
-      const publicUrls: [string | null, string | null, string | null] = [
+      const publicUrls: PortfolioSlots = [
+        null,
+        null,
+        null,
         null,
         null,
         null,
       ];
+      let headshotPublicUrl: string | null = null;
 
-      for (let index = 0; index < 3; index += 1) {
-        const uri = imageUris[index];
+      if (headshotUri) {
+        if (isRemoteUrl(headshotUri)) {
+          headshotPublicUrl = headshotUri;
+        } else {
+          const token = await requestUploadToken(state.username);
+          const upload = await uploadProfileImage({
+            username: state.username,
+            uploadToken: token.uploadToken,
+            uri: headshotUri,
+            mimeType: "image/webp",
+            fileName: `${state.username}-headshot.webp`,
+          });
+          headshotPublicUrl = upload.publicUrl;
+        }
+      }
+
+      for (let index = 0; index < PORTFOLIO_SLOT_COUNT; index += 1) {
+        const uri = portfolioUris[index];
         if (!uri) {
           continue;
         }
@@ -148,7 +233,7 @@ export default function BuildStageScreen() {
           uploadToken: token.uploadToken,
           uri,
           mimeType: "image/webp",
-          fileName: `${state.username}-${index + 1}.webp`,
+          fileName: `${state.username}-portfolio-${index + 1}.webp`,
         });
         publicUrls[index] = upload.publicUrl;
       }
@@ -157,8 +242,11 @@ export default function BuildStageScreen() {
         bio: bio.trim(),
         designInstructions: designInstructions.trim(),
         preferredArchetypeId,
+        socialHandleDrafts,
         profileId,
-        imagePublicUrls: publicUrls,
+        showreelUrls,
+        headshotPublicUrl,
+        portfolioPublicUrls: publicUrls,
       });
 
       router.push({
@@ -289,18 +377,65 @@ export default function BuildStageScreen() {
           style={[styles.input, styles.textAreaSmall]}
         />
 
-        <Text style={styles.sectionLabel}>Your 3 photos</Text>
-        <View style={styles.photoRow}>
-          {([0, 1, 2] as const).map((index) => (
+        <SocialHandleFields
+          values={socialHandleDrafts}
+          onChange={(platform, value) => {
+            const next = patchSocialDraft(socialHandleDrafts, platform, value);
+            setSocialHandleDrafts(next);
+            patchOnboardingState({ socialHandleDrafts: next });
+          }}
+        />
+
+        <Text style={styles.sectionLabel}>Profile headshot</Text>
+        <Text style={styles.sectionHint}>
+          One square photo for your avatar — we crop it automatically.
+        </Text>
+        <Pressable style={styles.headshotSlot} onPress={pickHeadshot}>
+          {headshotUri ? (
+            <Image source={{ uri: headshotUri }} style={styles.headshot} />
+          ) : (
+            <Text style={styles.photoPlaceholder}>Add headshot</Text>
+          )}
+        </Pressable>
+
+        <Text style={styles.sectionLabel}>Featured showreel & trailers</Text>
+        <Text style={styles.sectionHint}>
+          Optional — paste up to 2 YouTube, Vimeo, or TikTok links (no video uploads).
+        </Text>
+        {([0, 1] as const).map((index) => (
+          <TextInput
+            key={`showreel-${index}`}
+            value={showreelUrls[index]}
+            onChangeText={(value) => updateShowreelUrl(index, value)}
+            placeholder={`Video link ${index + 1} (optional)`}
+            placeholderTextColor={colors.muted}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
+            style={styles.input}
+          />
+        ))}
+
+        <Text style={styles.sectionLabel}>Portfolio gallery</Text>
+        <Text style={styles.sectionHint}>
+          Add {PORTFOLIO_MIN}–{PORTFOLIO_MAX} photos — they appear as a swipeable gallery on your page.
+        </Text>
+        <View style={styles.portfolioGrid}>
+          {Array.from({ length: PORTFOLIO_SLOT_COUNT }, (_, index) => (
             <Pressable
               key={index}
-              style={styles.photoSlot}
-              onPress={() => pickImage(index)}
+              style={styles.portfolioSlot}
+              onPress={() => pickPortfolioImage(index)}
             >
-              {imageUris[index] ? (
-                <Image source={{ uri: imageUris[index]! }} style={styles.photo} />
+              {portfolioUris[index] ? (
+                <Image
+                  source={{ uri: portfolioUris[index]! }}
+                  style={styles.portfolioPhoto}
+                />
               ) : (
-                <Text style={styles.photoPlaceholder}>Photo {index + 1}</Text>
+                <Text style={styles.photoPlaceholder}>
+                  {index < PORTFOLIO_MIN ? `Photo ${index + 1}` : "Optional"}
+                </Text>
               )}
             </Pressable>
           ))}
@@ -319,8 +454,8 @@ export default function BuildStageScreen() {
         </Pressable>
 
         <Text style={styles.note}>
-          Free tier: building takes about 5 minutes. You will see a short ad
-          while we craft your design.
+          Free tier: watch 3 short videos while our AI builds your page (about
+          90 seconds). Upgrade later for instant builds with no ads.
         </Text>
       </KeyboardAwareScreen>
     </>
@@ -422,6 +557,45 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     marginBottom: 20,
+  },
+  headshotSlot: {
+    width: 132,
+    height: 132,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+  },
+  headshot: {
+    width: "100%",
+    height: "100%",
+  },
+  portfolioGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginBottom: 20,
+  },
+  portfolioSlot: {
+    width: "31%",
+    flexGrow: 1,
+    minWidth: "30%",
+    aspectRatio: 4 / 3,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  portfolioPhoto: {
+    width: "100%",
+    height: "100%",
   },
   photoSlot: {
     flex: 1,

@@ -109,6 +109,15 @@ function moodForArchetype(id: ArchetypeId): CreatorClassification["mood"] {
 }
 
 function verticalFromHaystack(haystack: string): string {
+  if (/\b(actor|actress|acting|film|movie|cinema|theater|theatre|hollywood)\b/i.test(haystack)) {
+    return "actor";
+  }
+  if (/\b(comedian|comedy|stand-?up|host|presenter)\b/i.test(haystack)) {
+    return "performer";
+  }
+  if (/\b(doctor|physician|nurse|clinic|medical|healthcare|dentist)\b/i.test(haystack)) {
+    return "healthcare";
+  }
   if (/\b(football|soccer|sport|athlete|basketball)\b/i.test(haystack)) {
     return "athlete";
   }

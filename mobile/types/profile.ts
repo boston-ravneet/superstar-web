@@ -1,3 +1,5 @@
+import type { SocialAccount } from "@/lib/social/accounts";
+
 export type OAuthProvider = "instagram" | "tiktok";
 
 export interface SocialLink {
@@ -19,8 +21,8 @@ export interface RegistrationPayload {
   displayName?: string;
   bio?: string;
   profileImageUrl?: string;
-  oauth: OAuthIdentityPayload;
-  socialLinks?: SocialLink[];
+  oauth?: OAuthIdentityPayload | null;
+  socialAccounts?: SocialAccount[];
 }
 
 export interface UsernameCheckResult {

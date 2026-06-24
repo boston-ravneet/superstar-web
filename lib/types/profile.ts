@@ -56,8 +56,10 @@ export interface RegistrationPayload {
   displayName?: string;
   bio?: string;
   profileImageUrl?: string;
-  oauth: OAuthIdentityPayload;
+  /** @deprecated optional — account auth replaces mandatory OAuth at signup */
+  oauth?: OAuthIdentityPayload | null;
   socialLinks?: SocialLink[];
+  socialAccounts?: import("@/lib/stage/social-accounts").SocialAccount[];
 }
 
 export interface UsernameCheckResult {

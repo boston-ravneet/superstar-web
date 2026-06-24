@@ -1,5 +1,7 @@
 import type { OAuthIdentityPayload } from "@/types/profile";
 import type { ArchetypeId } from "@/constants/archetypes";
+import type { SocialHandleDrafts } from "@/lib/social/accounts";
+import { EMPTY_PORTFOLIO } from "@/lib/media/constants";
 
 export interface OnboardingState {
   mode: "create" | "edit";
@@ -9,9 +11,13 @@ export interface OnboardingState {
   designInstructions: string;
   preferredArchetypeId: ArchetypeId | null;
   oauth: OAuthIdentityPayload | null;
+  socialHandleDrafts: SocialHandleDrafts;
   profileId: string | null;
-  imageUris: [string | null, string | null, string | null];
-  imagePublicUrls: [string | null, string | null, string | null];
+  headshotUri: string | null;
+  headshotPublicUrl: string | null;
+  showreelUrls: [string, string];
+  portfolioUris: typeof EMPTY_PORTFOLIO;
+  portfolioPublicUrls: typeof EMPTY_PORTFOLIO;
 }
 
 export const initialOnboardingState: OnboardingState = {
@@ -22,9 +28,13 @@ export const initialOnboardingState: OnboardingState = {
   designInstructions: "",
   preferredArchetypeId: null,
   oauth: null,
+  socialHandleDrafts: {},
   profileId: null,
-  imageUris: [null, null, null],
-  imagePublicUrls: [null, null, null],
+  headshotUri: null,
+  headshotPublicUrl: null,
+  showreelUrls: ["", ""],
+  portfolioUris: [...EMPTY_PORTFOLIO],
+  portfolioPublicUrls: [...EMPTY_PORTFOLIO],
 };
 
 let onboardingState: OnboardingState = { ...initialOnboardingState };

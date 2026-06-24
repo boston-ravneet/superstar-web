@@ -33,6 +33,7 @@ export interface StageProfileView extends ProfilePublicView {
 }
 
 export interface SocialLinksPayload {
+  accounts?: import("@/lib/stage/social-accounts").SocialAccount[];
   links?: import("@/lib/types/profile").SocialLink[];
   videos?: StageVideo[];
   photos?: StagePhoto[];

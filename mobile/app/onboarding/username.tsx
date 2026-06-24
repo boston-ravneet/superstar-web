@@ -66,7 +66,7 @@ export default function UsernameScreen() {
       displayName: result.username,
       mode: "create",
     });
-    router.push("/onboarding/oauth");
+    router.push("/onboarding/build");
   }
 
   return (
@@ -133,7 +133,7 @@ export default function UsernameScreen() {
             disabled={!result?.available || result.locked}
             onPress={handleContinue}
           >
-            <Text style={styles.secondaryButtonText}>Continue to OAuth</Text>
+            <Text style={styles.secondaryButtonText}>Continue to build</Text>
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>

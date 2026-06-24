@@ -1,4 +1,3 @@
-import { getBindings } from "@/lib/cloudflare/env";
 import {
   requireBuilderAuth,
   requireProfileOwnership,
@@ -9,6 +8,11 @@ import {
   runTemplateGeneration,
   saveBuilderInput,
 } from "@/lib/db/profile-builder";
+import {
+  prepareBuilderMediaPayload,
+  validateShowreelVideos,
+} from "@/lib/stage/builder-media";
+import { validateShowreelUrl } from "@/lib/stage/video-embed";
 import type { BuilderSubmitPayload, ProfileBuilderInput } from "@/lib/types/stage-template";
 
 export const runtime = "nodejs";
@@ -30,10 +34,27 @@ export async function POST(request: Request) {
       return jsonError("Tell us a little about yourself.", "BIO_REQUIRED", 400);
     }
 
-    if (!Array.isArray(payload.imageUrls) || payload.imageUrls.length !== 3) {
+    const rawImageUrls = Array.isArray(payload.imageUrls)
+      ? payload.imageUrls.filter((url): url is string => typeof url === "string")
+      : [];
+
+    const prepared = prepareBuilderMediaPayload(rawImageUrls, payload.media);
+    if (!("media" in prepared)) {
       return jsonError(
-        "Upload exactly 3 photos for your stage.",
-        "IMAGES_REQUIRED",
+        prepared.error ?? "Upload your headshot and portfolio photos.",
+        prepared.code ?? "MEDIA_REQUIRED",
+        400,
+      );
+    }
+
+    const showreelValidation = validateShowreelVideos(
+      prepared.media.showreelVideos,
+      validateShowreelUrl,
+    );
+    if (!showreelValidation.valid) {
+      return jsonError(
+        showreelValidation.error ?? "Invalid showreel link.",
+        showreelValidation.code ?? "SHOWREEL_INVALID_URL",
         400,
       );
     }
@@ -61,12 +82,14 @@ export async function POST(request: Request) {
     const builderInput: ProfileBuilderInput = {
       bio: payload.bio.trim(),
       designInstructions,
-      imageUrls: payload.imageUrls,
+      imageUrls: prepared.imageUrls,
+      media: prepared.media,
       displayName: profile.display_name ?? profile.username,
       username: profile.username,
       instagramHandle: profile.instagram_handle,
       tiktokHandle: profile.tiktok_handle,
       preferredArchetypeId: payload.preferredArchetypeId,
+      socialAccounts: payload.socialAccounts,
     };
 
     await saveBuilderInput(auth.bindings.DB, payload.profileId, builderInput, {
@@ -89,7 +112,7 @@ export async function POST(request: Request) {
       publishStatus: updated?.publish_status ?? "preview",
       generationSource: generation.source,
       generationError: generation.error ?? updated?.generation_error ?? null,
-      estimatedMinutes: 5,
+      estimatedMinutes: 2,
       message:
         generation.source === "gemini"
           ? "AI design ready for preview."

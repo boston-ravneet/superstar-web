@@ -11,7 +11,13 @@ import {
   collectGoogleFontFamilies,
 } from "@/lib/stage/google-fonts";
 import { StageViewTracker } from "@/components/stage/StageViewTracker";
+import { StageCanvasBackground } from "@/components/stage/StageCanvasBackground";
 import { sanitizeGalleryTitleForDisplay } from "@/lib/stage/persona-section-titles";
+import {
+  SOCIAL_PLATFORM_LABELS,
+  socialAccountDisplayHandle,
+  socialAccountHref,
+} from "@/lib/stage/social-accounts";
 
 const COLLAPSIBLE_SECTION_TYPES = new Set([
   "bio",
@@ -84,6 +90,8 @@ function accordionTitle(section: StageTemplateSection): string {
   switch (section.type) {
     case "bio":
       return String(section.content.title ?? "About");
+    case "showreel":
+      return String(section.content.title ?? "Showreel & Trailers");
     case "gallery":
       return String(section.content.title ?? "Photos");
     case "skills":
@@ -227,6 +235,90 @@ function HeroSection({
   );
 }
 
+function ShowreelSection({
+  section,
+  palette,
+  compact = false,
+}: {
+  section: StageTemplateSection;
+  palette: StageTemplateDocument["palette"];
+  compact?: boolean;
+}) {
+  const title = String(section.content.title ?? "Showreel & Trailers");
+  const videos = Array.isArray(section.content.videos)
+    ? (section.content.videos as Array<{
+        url?: string;
+        embedUrl?: string;
+        provider?: string;
+        title?: string;
+      }>)
+    : [];
+
+  if (videos.length === 0) {
+    return null;
+  }
+
+  return (
+    <div style={{ padding: compact ? "0 16px 16px" : "0 24px 24px" }}>
+      {!compact ? (
+        <h2 style={{ color: palette.text, marginBottom: 16 }}>{title}</h2>
+      ) : null}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 20,
+        }}
+      >
+        {videos.map((video, index) =>
+          video.embedUrl ? (
+            <figure key={`${video.embedUrl}-${index}`} style={{ margin: 0 }}>
+              {video.title ? (
+                <figcaption
+                  style={{
+                    color: palette.muted,
+                    fontSize: 14,
+                    marginBottom: 8,
+                    fontWeight: 600,
+                  }}
+                >
+                  {video.title}
+                </figcaption>
+              ) : null}
+              <div
+                style={{
+                  position: "relative",
+                  width: "100%",
+                  paddingBottom: video.provider === "tiktok" ? "125%" : "56.25%",
+                  borderRadius: 16,
+                  overflow: "hidden",
+                  border: `1px solid ${palette.border}`,
+                  background: palette.surface,
+                }}
+              >
+                <iframe
+                  src={video.embedUrl}
+                  title={video.title ?? `Showreel video ${index + 1}`}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  loading="lazy"
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    width: "100%",
+                    height: "100%",
+                    border: 0,
+                  }}
+                />
+              </div>
+            </figure>
+          ) : null,
+        )}
+      </div>
+    </div>
+  );
+}
+
 function GallerySection({
   section,
   palette,
@@ -247,6 +339,7 @@ function GallerySection({
     ? (section.content.images as Array<{ url?: string; caption?: string; span?: number }>)
     : [];
   const isCircular = galleryImageBorderRadius === "50%";
+  const useCarousel = images.length > 3;
 
   function renderImage(image: { url?: string; caption?: string }, index: number) {
     if (!image.url) {
@@ -280,6 +373,62 @@ function GallerySection({
       >
         {img}
       </button>
+    );
+  }
+
+  if (useCarousel) {
+    return (
+      <div style={{ padding: compact ? "0 0 16px" : "0 0 24px" }}>
+        {!compact ? (
+          <h2 style={{ color: palette.text, padding: "0 24px", marginBottom: 12 }}>
+            {title}
+          </h2>
+        ) : null}
+        <div
+          style={{
+            display: "flex",
+            gap: 14,
+            overflowX: "auto",
+            scrollSnapType: "x mandatory",
+            WebkitOverflowScrolling: "touch",
+            padding: compact ? "0 16px 8px" : "0 24px 8px",
+            scrollbarWidth: "none",
+          }}
+        >
+          {images.map((image, index) =>
+            image.url ? (
+              <figure
+                key={`${image.url}-${index}`}
+                style={{
+                  flex: "0 0 78%",
+                  maxWidth: 420,
+                  scrollSnapAlign: "start",
+                  margin: 0,
+                  overflow: "hidden",
+                  borderRadius: galleryImageBorderRadius,
+                  border: `1px solid ${palette.border}`,
+                }}
+              >
+                <div style={{ height: 240, overflow: "hidden" }}>
+                  {renderImage(image, index)}
+                </div>
+                {image.caption ? (
+                  <figcaption
+                    style={{
+                      padding: "8px 12px",
+                      color: palette.muted,
+                      background: palette.surface,
+                      fontSize: 13,
+                    }}
+                  >
+                    {image.caption}
+                  </figcaption>
+                ) : null}
+              </figure>
+            ) : null,
+          )}
+        </div>
+      </div>
     );
   }
 
@@ -605,21 +754,21 @@ function CtaSection({
           justifyContent: "center",
         }}
       >
-        {rows.map((action) => (
+        {rows.map((action) => {
+          const external =
+            action.kind !== "email" && action.kind !== "phone";
+          return (
           <a
             key={`${action.kind}-${action.href}`}
             href={action.href}
-            target={action.kind === "instagram" || action.kind === "tiktok" ? "_blank" : undefined}
-            rel={
-              action.kind === "instagram" || action.kind === "tiktok"
-                ? "noreferrer"
-                : undefined
-            }
+            target={external ? "_blank" : undefined}
+            rel={external ? "noreferrer" : undefined}
             style={linkStyle}
           >
             {action.label}
           </a>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -632,14 +781,53 @@ function SocialSection({
   section: StageTemplateSection;
   palette: StageTemplateDocument["palette"];
 }) {
-  const instagramHandle = section.content.instagramHandle
-    ? String(section.content.instagramHandle)
-    : null;
-  const tiktokHandle = section.content.tiktokHandle
-    ? String(section.content.tiktokHandle)
-    : null;
+  const rawAccounts = Array.isArray(section.content.accounts)
+    ? (section.content.accounts as Array<{
+        platform?: string;
+        handle?: string;
+        verified?: boolean;
+      }>)
+    : [];
 
-  if (!instagramHandle && !tiktokHandle) {
+  const accountsFromContent = rawAccounts
+    .filter(
+      (entry) =>
+        entry.platform &&
+        entry.handle &&
+        typeof entry.handle === "string" &&
+        entry.handle.trim(),
+    )
+    .map((entry) => ({
+      platform: String(entry.platform),
+      handle: String(entry.handle),
+      verified: Boolean(entry.verified),
+    }));
+
+  const legacyAccounts = [
+    section.content.instagramHandle
+      ? {
+          platform: "instagram",
+          handle: String(section.content.instagramHandle),
+          verified: false,
+        }
+      : null,
+    section.content.tiktokHandle
+      ? {
+          platform: "tiktok",
+          handle: String(section.content.tiktokHandle),
+          verified: false,
+        }
+      : null,
+  ].filter(Boolean) as Array<{
+    platform: string;
+    handle: string;
+    verified: boolean;
+  }>;
+
+  const accounts =
+    accountsFromContent.length > 0 ? accountsFromContent : legacyAccounts;
+
+  if (accounts.length === 0) {
     return null;
   }
 
@@ -668,28 +856,50 @@ function SocialSection({
         padding: "8px 24px 20px",
       }}
     >
-      {instagramHandle ? (
-        <a
-          href={`https://instagram.com/${instagramHandle}`}
-          target="_blank"
-          rel="noreferrer"
-          aria-label={`Instagram @${instagramHandle}`}
-          style={linkStyle}
-        >
-          Instagram · @{instagramHandle}
-        </a>
-      ) : null}
-      {tiktokHandle ? (
-        <a
-          href={`https://tiktok.com/@${tiktokHandle}`}
-          target="_blank"
-          rel="noreferrer"
-          aria-label={`TikTok @${tiktokHandle}`}
-          style={linkStyle}
-        >
-          TikTok · @{tiktokHandle}
-        </a>
-      ) : null}
+      {accounts.map((account) => {
+        const href = socialAccountHref(
+          account.platform as import("@/lib/stage/social-accounts").SocialPlatform,
+          account.handle,
+        );
+        if (!href) {
+          return null;
+        }
+
+        const label = SOCIAL_PLATFORM_LABELS[
+          account.platform as import("@/lib/stage/social-accounts").SocialPlatform
+        ] ?? account.platform;
+        const display = socialAccountDisplayHandle(
+          account.platform as import("@/lib/stage/social-accounts").SocialPlatform,
+          account.handle,
+        );
+        const external =
+          account.platform !== "email" && account.platform !== "phone";
+
+        return (
+          <a
+            key={`${account.platform}-${account.handle}`}
+            href={href}
+            target={external ? "_blank" : undefined}
+            rel={external ? "noreferrer" : undefined}
+            aria-label={`${label} ${display}${account.verified ? " verified" : ""}`}
+            style={linkStyle}
+          >
+            {label} · {display}
+            {account.verified ? (
+              <span
+                aria-hidden
+                style={{
+                  color: palette.secondary,
+                  fontWeight: 800,
+                  fontSize: 13,
+                }}
+              >
+                ✓
+              </span>
+            ) : null}
+          </a>
+        );
+      })}
     </div>
   );
 }
@@ -834,6 +1044,14 @@ function renderSectionBody(
           onImageClick={onImageClick}
         />
       );
+    case "showreel":
+      return (
+        <ShowreelSection
+          section={section}
+          palette={template.palette}
+          compact={compact}
+        />
+      );
     case "gallery":
       return (
         <GallerySection
@@ -916,10 +1134,7 @@ export function StageTemplateRenderer({
   const [openAccordionId, setOpenAccordionId] = useState<string | null>(null);
   const activeAccordionId = openAccordionId ?? defaultOpenId;
 
-  const background =
-    template.canvas.backgroundType === "gradient"
-      ? `linear-gradient(180deg, ${template.canvas.background} 0%, ${template.canvas.backgroundGradientTo ?? template.canvas.background} 100%)`
-      : template.canvas.background;
+  const canvasMotif = template.canvas.motif ?? "none";
 
   const imageStyle = {
     avatarBorderRadius: template.assets?.avatarBorderRadius ?? "32px",
@@ -937,13 +1152,18 @@ export function StageTemplateRenderer({
   return (
     <div
       style={{
+        position: "relative",
         minHeight: template.canvas.minHeight,
-        background,
         color: template.palette.text,
         padding: template.canvas.padding,
         fontFamily: template.typography.bodyFont,
       }}
     >
+      <StageCanvasBackground
+        canvas={template.canvas}
+        palette={template.palette}
+        motif={canvasMotif}
+      />
       {profileId && trackViews ? (
         <StageViewTracker profileId={profileId} enabled={!preview} />
       ) : null}
@@ -979,7 +1199,7 @@ export function StageTemplateRenderer({
         </div>
       ) : null}
 
-      <div style={{ maxWidth: template.canvas.maxWidth, margin: "0 auto" }}>
+      <div style={{ position: "relative", zIndex: 1, maxWidth: template.canvas.maxWidth, margin: "0 auto" }}>
         {visibleSections.map((section) => {
           const inAccordion =
             useAccordions && COLLAPSIBLE_SECTION_TYPES.has(section.type);

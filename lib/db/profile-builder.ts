@@ -19,6 +19,16 @@ import {
 } from "@/lib/stage/bio-display";
 import { summarizeBioProfessionally } from "@/lib/ai/bio-copy";
 import { logProfileChange } from "@/lib/db/profile-change-log";
+import {
+  legacyHandlesFromAccounts,
+  mergeSocialAccountSources,
+  normalizeSocialAccounts,
+  serializeSocialAccountsPayload,
+} from "@/lib/stage/social-accounts";
+import {
+  imageUrlsFromMedia,
+  mediaFromLegacyImageUrls,
+} from "@/lib/stage/builder-media";
 
 function keepsPublishedLive(status: PublishStatus): boolean {
   return status === "published";
@@ -43,22 +53,6 @@ function statusWhileEditing(
   return "draft";
 }
 
-function padImageUrls(urls: string[]): [string, string, string] | null {
-  const unique = urls.filter(Boolean).filter(
-    (url, index, array) => array.indexOf(url) === index,
-  );
-
-  if (unique.length === 0) {
-    return null;
-  }
-
-  while (unique.length < 3) {
-    unique.push(unique[unique.length - 1]);
-  }
-
-  return [unique[0], unique[1], unique[2]];
-}
-
 export function resolveBuilderInputForEdit(
   profile: BuilderProfileRow,
 ): ProfileBuilderInput {
@@ -67,16 +61,22 @@ export function resolveBuilderInputForEdit(
     : null;
 
   if (stored?.imageUrls?.length) {
-    const padded = padImageUrls(stored.imageUrls);
-    if (padded) {
-      return {
-        ...stored,
-        bio: stored.bio || profile.bio || "",
-        imageUrls: padded,
+    const media =
+      stored.media ?? mediaFromLegacyImageUrls(stored.imageUrls);
+    return {
+      ...stored,
+      bio: stored.bio || profile.bio || "",
+      imageUrls: imageUrlsFromMedia(media),
+      media,
+      instagramHandle: profile.instagram_handle,
+      tiktokHandle: profile.tiktok_handle,
+      socialAccounts: mergeSocialAccountSources({
+        socialLinksJson: profile.social_links_json,
         instagramHandle: profile.instagram_handle,
         tiktokHandle: profile.tiktok_handle,
-      };
-    }
+        socialAccounts: stored.socialAccounts,
+      }),
+    };
   }
 
   const layout = parseLayoutConfig(profile.layout_config_json ?? "{}");
@@ -84,16 +84,23 @@ export function resolveBuilderInputForEdit(
   const candidates = [profile.profile_image_url, ...fromGallery].filter(
     (url): url is string => Boolean(url),
   );
-  const padded = padImageUrls(candidates);
+  const media = mediaFromLegacyImageUrls(candidates);
 
   return {
     bio: profile.bio ?? "",
     designInstructions: stored?.designInstructions,
-    imageUrls: padded ?? ["", "", ""],
+    imageUrls: imageUrlsFromMedia(media),
+    media,
     displayName: profile.display_name ?? profile.username,
     username: profile.username,
     instagramHandle: profile.instagram_handle,
     tiktokHandle: profile.tiktok_handle,
+    socialAccounts: mergeSocialAccountSources({
+      socialLinksJson: profile.social_links_json,
+      instagramHandle: profile.instagram_handle,
+      tiktokHandle: profile.tiktok_handle,
+      socialAccounts: stored?.socialAccounts,
+    }),
   };
 }
 
@@ -105,6 +112,7 @@ export interface BuilderProfileRow {
   profile_image_url: string | null;
   instagram_handle: string | null;
   tiktok_handle: string | null;
+  social_links_json: string | null;
   layout_config_json: string | null;
   publish_status: PublishStatus;
   stage_template_json: string | null;
@@ -121,7 +129,7 @@ export async function getBuilderProfile(
     .prepare(
       `SELECT
         id, username, display_name, bio, profile_image_url,
-        instagram_handle, tiktok_handle,
+        instagram_handle, tiktok_handle, social_links_json,
         COALESCE(layout_config_json, '{}') AS layout_config_json,
         COALESCE(publish_status, 'draft') AS publish_status,
         stage_template_json, builder_input_json, generation_error,
@@ -146,12 +154,17 @@ export async function saveBuilderInput(
   }
 
   const nextStatus = statusWhileEditing(profile.publish_status, "generating");
+  const socialAccounts = normalizeSocialAccounts(input.socialAccounts ?? []);
+  const legacy = legacyHandlesFromAccounts(socialAccounts);
 
   await db
     .prepare(
       `UPDATE profiles
        SET bio = ?,
            profile_image_url = ?,
+           instagram_handle = ?,
+           tiktok_handle = ?,
+           social_links_json = ?,
            builder_input_json = ?,
            publish_status = ?,
            generation_error = NULL,
@@ -160,8 +173,11 @@ export async function saveBuilderInput(
     )
     .bind(
       input.bio,
-      input.imageUrls[0] ?? null,
-      JSON.stringify(input),
+      input.media?.headshotUrl ?? input.imageUrls[0] ?? null,
+      legacy.instagramHandle,
+      legacy.tiktokHandle,
+      serializeSocialAccountsPayload(socialAccounts),
+      JSON.stringify({ ...input, socialAccounts }),
       nextStatus,
       profileId,
     )

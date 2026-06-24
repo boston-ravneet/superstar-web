@@ -3,19 +3,34 @@ import type {
   StageTemplateDocument,
   StageTemplateSection,
 } from "@/lib/types/stage-template";
-import { wantsCircularImages } from "@/lib/ai/design-theme";
 import { sanitizeSkillTags } from "@/lib/ai/bio-copy";
 import { DEFAULT_LAYOUT, DEFAULT_STYLE } from "@/lib/stage/template-defaults";
 import { buildCtaContent } from "@/lib/stage/resolve-connect-actions";
+import {
+  mergeSocialAccountSources,
+  normalizeSocialAccounts,
+  socialAccountsToBuilderHandles,
+} from "@/lib/stage/social-accounts";
+import {
+  imageUrlsFromMedia,
+  mediaFromLegacyImageUrls,
+  normalizeBuilderMedia,
+} from "@/lib/stage/builder-media";
+import {
+  builderHeadshotUrl,
+  portfolioGalleryImages,
+  showreelSectionVideos,
+} from "@/lib/stage/media-sections";
 
 export function normalizeBuilderInput(
   raw: unknown,
-  profile?: {
+    profile?: {
     instagram_handle?: string | null;
     tiktok_handle?: string | null;
     display_name?: string | null;
     username?: string;
     bio?: string | null;
+    social_links_json?: string | null;
   },
 ): ProfileBuilderInput | null {
   if (!raw || typeof raw !== "object") {
@@ -30,15 +45,20 @@ export function normalizeBuilderInput(
     return null;
   }
 
+  const imageUrls = value.imageUrls.filter(
+    (url): url is string => typeof url === "string",
+  );
+  const media =
+    normalizeBuilderMedia(value.media) ?? mediaFromLegacyImageUrls(imageUrls);
+
   return {
     bio: value.bio,
     designInstructions:
       typeof value.designInstructions === "string"
         ? value.designInstructions
         : legacyInstructions,
-    imageUrls: value.imageUrls.filter(
-      (url): url is string => typeof url === "string",
-    ),
+    imageUrls: imageUrlsFromMedia(media),
+    media,
     displayName:
       typeof value.displayName === "string"
         ? value.displayName
@@ -70,11 +90,54 @@ export function normalizeBuilderInput(
       value.preferredArchetypeId === "gold-ledger"
         ? value.preferredArchetypeId
         : undefined,
+    socialAccounts: Array.isArray(value.socialAccounts)
+      ? normalizeSocialAccounts(
+          value.socialAccounts as Array<Record<string, unknown>>,
+        )
+      : mergeSocialAccountSources({
+          socialLinksJson: profile?.social_links_json,
+          instagramHandle:
+            typeof value.instagramHandle === "string"
+              ? value.instagramHandle
+              : profile?.instagram_handle,
+          tiktokHandle:
+            typeof value.tiktokHandle === "string"
+              ? value.tiktokHandle
+              : profile?.tiktok_handle,
+        }),
+  };
+}
+
+function buildShowreelSection(input: ProfileBuilderInput): StageTemplateSection | null {
+  const videos = showreelSectionVideos(input);
+  if (videos.length === 0) {
+    return null;
+  }
+
+  return {
+    id: "showreel",
+    type: "showreel",
+    order: 2,
+    visible: true,
+    layout: {
+      ...DEFAULT_LAYOUT,
+      direction: "column",
+      gap: "16px",
+      padding: "0 24px 20px",
+    },
+    style: DEFAULT_STYLE,
+    content: {
+      title: "Showreel & Trailers",
+      videos,
+    },
   };
 }
 
 function buildSocialSection(input: ProfileBuilderInput): StageTemplateSection | null {
-  if (!input.instagramHandle && !input.tiktokHandle) {
+  const accounts = normalizeSocialAccounts(input.socialAccounts ?? []);
+  const legacy = socialAccountsToBuilderHandles(accounts);
+
+  if (accounts.length === 0) {
     return null;
   }
 
@@ -91,8 +154,13 @@ function buildSocialSection(input: ProfileBuilderInput): StageTemplateSection | 
     },
     style: DEFAULT_STYLE,
     content: {
-      instagramHandle: input.instagramHandle ?? null,
-      tiktokHandle: input.tiktokHandle ?? null,
+      accounts: accounts.map((account) => ({
+        platform: account.platform,
+        handle: account.handle,
+        verified: Boolean(account.verified),
+      })),
+      instagramHandle: legacy.instagramHandle ?? null,
+      tiktokHandle: legacy.tiktokHandle ?? null,
     },
   };
 }
@@ -132,8 +200,21 @@ export function finalizeStageTemplate(
   const hasSocial = withoutInstructionLeak.some(
     (section) => section.type === "social",
   );
+  const hasShowreel = withoutInstructionLeak.some(
+    (section) => section.type === "showreel",
+  );
 
   let sections = withoutInstructionLeak;
+
+  if (!hasShowreel) {
+    const showreelSection = buildShowreelSection(input);
+    if (showreelSection) {
+      const socialOrder =
+        sections.find((section) => section.type === "social")?.order ?? 1;
+      showreelSection.order = socialOrder + 1;
+      sections = [...sections, showreelSection].sort((a, b) => a.order - b.order);
+    }
+  }
 
   if (!hasSocial) {
     const socialSection = buildSocialSection(input);
@@ -149,53 +230,63 @@ export function finalizeStageTemplate(
         return section;
       }
 
+      const accounts = normalizeSocialAccounts(input.socialAccounts ?? []);
+      const legacy = socialAccountsToBuilderHandles(accounts);
+
       return {
         ...section,
+        visible: accounts.length > 0,
         content: {
-          instagramHandle: input.instagramHandle ?? section.content.instagramHandle,
-          tiktokHandle: input.tiktokHandle ?? section.content.tiktokHandle,
+          ...section.content,
+          accounts: accounts.map((account) => ({
+            platform: account.platform,
+            handle: account.handle,
+            verified: Boolean(account.verified),
+          })),
+          instagramHandle: legacy.instagramHandle ?? section.content.instagramHandle,
+          tiktokHandle: legacy.tiktokHandle ?? section.content.tiktokHandle,
         },
       };
     });
   }
 
   sections = sections.map((section) => {
-    if (section.type === "hero" && input.imageUrls[0]) {
+    if (section.type === "hero" && builderHeadshotUrl(input)) {
       return {
         ...section,
         content: {
           ...section.content,
-          avatarUrl: input.imageUrls[0],
+          avatarUrl: builderHeadshotUrl(input),
           headline: section.content.headline ?? input.displayName,
           handle: section.content.handle ?? input.username,
         },
       };
     }
 
-    if (section.type === "gallery" && input.imageUrls.length > 0) {
+    if (section.type === "showreel") {
+      const videos = showreelSectionVideos(input);
+      return {
+        ...section,
+        visible: videos.length > 0,
+        content: {
+          ...section.content,
+          videos,
+        },
+      };
+    }
+
+    if (section.type === "gallery") {
       const existingImages = Array.isArray(section.content.images)
         ? (section.content.images as Array<{ url?: string; caption?: string; span?: number }>)
         : [];
 
-      const circular = wantsCircularImages(designHints);
-
-      const images = input.imageUrls.map((url, index) => {
-        const existingCaption = existingImages[index]?.caption?.trim();
-        const genericCaption =
-          !existingCaption ||
-          /^photo\s*\d+$/i.test(existingCaption) ||
-          existingCaption.toLowerCase() === "featured";
-
-        return {
-          url,
-          caption: circular || genericCaption ? undefined : existingCaption,
-          span: circular ? 1 : (existingImages[index]?.span ?? (index === 0 ? 2 : 1)),
-        };
+      const images = portfolioGalleryImages(input, designHints, {
+        existingImages,
       });
 
       return {
         ...section,
-        visible: true,
+        visible: images.length > 0,
         content: {
           ...section.content,
           images,

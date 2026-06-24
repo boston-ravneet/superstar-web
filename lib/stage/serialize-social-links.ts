@@ -5,11 +5,12 @@ export function serializeSocialLinksPayload(
   links: SocialLink[] | undefined,
   extras?: Omit<SocialLinksPayload, "links">,
 ): string {
-  if (!links?.length && !extras) {
+  const hasAccounts = Boolean(extras?.accounts?.length);
+  if (!links?.length && !extras && !hasAccounts) {
     return "[]";
   }
 
-  if (!extras) {
+  if (!extras && !hasAccounts) {
     return JSON.stringify(links ?? []);
   }
 

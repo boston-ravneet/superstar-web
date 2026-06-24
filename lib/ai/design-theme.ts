@@ -22,7 +22,55 @@ function isDarkTheme(hints: string): boolean {
 
 /** Matches blue, common typos (blur), and navy/sky wording. */
 export function prefersBlue(hints: string): boolean {
-  return /\b(blue|blur|navy|azure|sky blue|royal blue|teal|cyan)\b/i.test(hints);
+  return /\b(blue|blur|navy|azure|sky blue|royal blue|teal|cyan|\bsky\b)\b/i.test(
+    hints,
+  );
+}
+
+export function prefersGreen(hints: string): boolean {
+  return /\b(green|forest|earth|grass|emerald|lime|olive)\b/i.test(hints);
+}
+
+/** Sky + earth / nature dual-color briefs (e.g. sky blue + green). */
+export function wantsSkyEarthTheme(hints: string): boolean {
+  const hasSky = /\b(sky|sky blue|azure|heaven)\b/i.test(hints);
+  const hasGreen = prefersGreen(hints);
+  const hasNature = /\b(nature|natural|outdoor|earth|planet)\b/i.test(hints);
+
+  if (hasSky && hasGreen) {
+    return true;
+  }
+
+  if (hasNature && (prefersBlue(hints) || hasGreen)) {
+    return true;
+  }
+
+  return /\b(two colors|2 colors)\b/i.test(hints) && prefersBlue(hints) && hasGreen;
+}
+
+function skyEarthPalette(): {
+  palette: StageTemplatePalette;
+  canvas: Pick<
+    StageTemplateCanvas,
+    "backgroundType" | "background" | "backgroundGradientTo"
+  >;
+} {
+  return {
+    palette: {
+      primary: "#0ea5e9",
+      secondary: "#22c55e",
+      accent: "#059669",
+      text: "#0f172a",
+      muted: "#475569",
+      surface: "rgba(255,255,255,0.94)",
+      border: "#bae6fd",
+    },
+    canvas: {
+      backgroundType: "gradient",
+      background: "#e0f2fe",
+      backgroundGradientTo: "#dcfce7",
+    },
+  };
 }
 
 export function rejectsPink(hints: string): boolean {
@@ -158,6 +206,10 @@ export function themeFromDesignHints(hints: string): {
     "backgroundType" | "background" | "backgroundGradientTo"
   >;
 } | null {
+  if (wantsSkyEarthTheme(hints)) {
+    return skyEarthPalette();
+  }
+
   const wantsBlue = prefersBlue(hints) || rejectsPink(hints);
 
   if (isBrightTheme(hints)) {
@@ -238,7 +290,7 @@ export function applyDesignThemeHints(
     };
   }
 
-  const bright = isBrightTheme(hints);
+  const bright = isBrightTheme(hints) || wantsSkyEarthTheme(hints);
 
   return {
     ...withImages,

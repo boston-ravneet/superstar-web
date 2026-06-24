@@ -5,6 +5,11 @@ import { buildStageProfileView } from "@/lib/stage/build-stage-view";
 import { normalizeUsername } from "@/lib/constants/premium-usernames";
 import { serializeLayoutConfig } from "@/lib/stage/parse-layout-config";
 import { serializeSocialLinksPayload } from "@/lib/stage/serialize-social-links";
+import {
+  legacyHandlesFromAccounts,
+  normalizeSocialAccounts,
+  serializeSocialAccountsPayload,
+} from "@/lib/stage/social-accounts";
 import type { RegistrationPayload, ProfilePublicView } from "@/lib/types/profile";
 import { parseSocialLinksPayload } from "@/lib/stage/parse-social-links";
 
@@ -196,9 +201,14 @@ export async function createProfile(
 ): Promise<ProfilePublicView> {
   const normalized = normalizeUsername(payload.username);
   const id = crypto.randomUUID();
+  const socialAccounts = normalizeSocialAccounts(payload.socialAccounts ?? []);
+  const legacy = legacyHandlesFromAccounts(socialAccounts);
   const instagramHandle =
-    payload.oauth.provider === "instagram" ? normalized : null;
-  const tiktokHandle = payload.oauth.provider === "tiktok" ? normalized : null;
+    payload.oauth?.provider === "instagram"
+      ? normalized
+      : legacy.instagramHandle;
+  const tiktokHandle =
+    payload.oauth?.provider === "tiktok" ? normalized : legacy.tiktokHandle;
 
   await db
     .prepare(
@@ -218,11 +228,13 @@ export async function createProfile(
       payload.profileImageUrl ?? null,
       instagramHandle,
       tiktokHandle,
-      serializeSocialLinksPayload(payload.socialLinks ?? []),
+      socialAccounts.length
+        ? serializeSocialAccountsPayload(socialAccounts)
+        : serializeSocialLinksPayload(payload.socialLinks ?? []),
       options.accountId,
       options.isLocked ? 1 : 0,
-      payload.oauth.provider,
-      payload.oauth.subject,
+      payload.oauth?.provider ?? null,
+      payload.oauth?.subject ?? null,
     )
     .run();
 
