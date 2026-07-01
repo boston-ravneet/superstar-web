@@ -109,10 +109,6 @@ export function buildCtaContent(
   }
 
   const primary = actions[0];
-  const accounts = accountsForInput(input);
-  const primaryAccount = accounts.find(
-    (account) => account.platform === primary.kind,
-  );
   const labelByKind: Partial<Record<ConnectActionKind, string>> = {
     instagram: "Message on Instagram",
     tiktok: "Find me on TikTok",
@@ -124,13 +120,44 @@ export function buildCtaContent(
     phone: "Call or text",
   };
 
-  const display = primaryAccount
-    ? socialAccountDisplayHandle(primaryAccount.platform, primaryAccount.handle)
-    : primary.label;
+  const heading = resolveCtaHeading(actions, labelByKind);
 
   return {
-    label: labelByKind[primary.kind] ?? `Connect via ${display}`,
+    label: heading,
     href: primary.href,
     actions,
   };
+}
+
+function resolveCtaHeading(
+  actions: ConnectAction[],
+  labelByKind: Partial<Record<ConnectActionKind, string>>,
+): string {
+  if (actions.length === 0) {
+    return "Get in touch";
+  }
+
+  if (actions.length === 1) {
+    return labelByKind[actions[0].kind] ?? "Connect";
+  }
+
+  const kinds = new Set(actions.map((action) => action.kind));
+  const contactKinds = ["email", "phone", "website"] as const;
+  const hasContact = contactKinds.some((kind) => kinds.has(kind));
+  const socialKinds = ["youtube", "instagram", "tiktok", "twitter", "linkedin"] as const;
+  const socialCount = socialKinds.filter((kind) => kinds.has(kind)).length;
+
+  if (hasContact) {
+    return "Get in touch";
+  }
+
+  if (socialCount === 1 && kinds.has("youtube")) {
+    return "Watch on YouTube";
+  }
+
+  if (socialCount > 0) {
+    return "Connect";
+  }
+
+  return "Get in touch";
 }

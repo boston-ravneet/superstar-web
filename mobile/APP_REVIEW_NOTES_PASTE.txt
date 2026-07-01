@@ -1,0 +1,18 @@
+RE: Submission 75215e5e-95cb-405e-9be2-2f739cdb1f4d — Get Superstar build 11
+
+GUIDELINE 2.1 — THIRD-PARTY AI
+Yes, we use Google Gemini (Google Cloud) only when the user taps "Create my page" or "Rebuild my page" — for profile layout/copy generation and image moderation. We do not offer AI chat.
+Data sent to Gemini (only on explicit build): user-selected photos, bio, optional design notes, optional social handles (text), display name, public handle. We do NOT send sign-in tokens, passwords, payment data, or device IDs.
+Consent: Sign-in requires accepting Terms & Privacy (checkbox). Existing users without current terms see an Accept Terms screen; AI/build is blocked until accepted.
+
+GUIDELINE 2.1(b) — BUSINESS MODEL
+No subscriptions, IAP, or payments. App is 100% free. All features (handle, photos, AI page, publish, analytics) are free. "Sponsored video" during generation is placeholder loading UI only, not ads or monetization. Sign in with Apple or Google — no fee.
+
+GUIDELINE 2.1(a) — CREATE MY PAGE SPINNER
+Fixed in build 11: request timeouts, clearer errors, mobile multipart upload fix, progress labels on build screen, removed "Upgrade later" copy. Test: Sign in → claim handle → add bio/photos → Create my page.
+
+GUIDELINE 5.1.1(v) — ACCOUNT DELETION
+Dashboard → Account settings → Delete my account (two-step confirm). Deletes account, handles, pages, media refs, builder data, analytics immediately. Web: https://getsuperstar.info/account/delete
+Demo: Sign in with Apple or Google (no demo password). Reviewer can create a test account and delete it via Account settings.
+
+CONTACT: Ravneet Singh — use App Store Connect contact info on file.

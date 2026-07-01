@@ -16,12 +16,15 @@ export default function IndexScreen() {
           backgroundColor: colors.background,
         }}
       >
-        <ActivityIndicator color={colors.fuchsia} />
+        <ActivityIndicator color={colors.primary} />
       </View>
     );
   }
 
   if (account) {
+    if (account.requiresTermsAcceptance) {
+      return <Redirect href="/accept-terms" />;
+    }
     return <Redirect href="/dashboard" />;
   }
 

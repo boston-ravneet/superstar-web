@@ -79,7 +79,11 @@ export default function CheckHandleScreen() {
             placeholder="@yourname"
             placeholderTextColor={colors.muted}
             value={username}
-            onChangeText={setUsername}
+            onChangeText={(text) => {
+              setUsername(text);
+              setResult(null);
+              setError(null);
+            }}
             returnKeyType="done"
             blurOnSubmit
             onSubmitEditing={handleCheck}
@@ -88,7 +92,7 @@ export default function CheckHandleScreen() {
 
           <Pressable style={styles.primaryButton} onPress={handleCheck}>
             {loading ? (
-              <ActivityIndicator color={colors.text} />
+              <ActivityIndicator color={colors.onPrimary} />
             ) : (
               <Text style={styles.primaryButtonText}>Check availability</Text>
             )}
@@ -107,6 +111,17 @@ export default function CheckHandleScreen() {
                     ? "This handle is available."
                     : "This handle is unavailable.")}
               </Text>
+              <Pressable
+                style={styles.tryAnotherButton}
+                onPress={() => {
+                  setResult(null);
+                  setError(null);
+                  setUsername("");
+                  inputRef.current?.focus();
+                }}
+              >
+                <Text style={styles.tryAnotherButtonText}>Try another handle</Text>
+              </Pressable>
             </View>
           ) : null}
         </ScrollView>
@@ -149,14 +164,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   primaryButton: {
-    backgroundColor: colors.fuchsia,
+    backgroundColor: colors.primary,
     borderRadius: 999,
     paddingVertical: 14,
     alignItems: "center",
     marginBottom: 16,
   },
   primaryButtonText: {
-    color: colors.text,
+    color: colors.onPrimary,
     fontWeight: "700",
   },
   error: {
@@ -178,5 +193,14 @@ const styles = StyleSheet.create({
   resultBody: {
     color: colors.muted,
     lineHeight: 20,
+  },
+  tryAnotherButton: {
+    marginTop: 14,
+    alignSelf: "flex-start",
+  },
+  tryAnotherButtonText: {
+    color: colors.text,
+    fontWeight: "600",
+    textDecorationLine: "underline",
   },
 });

@@ -10,6 +10,7 @@ import {
   usernameExists,
 } from "@/lib/db/profiles";
 import { jsonError, jsonOk } from "@/lib/api/response";
+import { requireAcceptedTerms } from "@/lib/api/require-terms";
 import type { RegistrationPayload } from "@/lib/types/profile";
 import { validateRegistrationPayload } from "@/lib/validation/registration";
 import { validateUsernameFormat } from "@/lib/validation/username";
@@ -59,6 +60,11 @@ export async function POST(request: Request) {
 
     if (!accountSession) {
       return jsonError("Session is invalid or expired.", "SESSION_INVALID", 401);
+    }
+
+    const termsBlocked = await requireAcceptedTerms(bindings.DB, accountSession.accountId);
+    if (termsBlocked) {
+      return termsBlocked;
     }
 
     const payload = (await request.json()) as RegistrationPayload;

@@ -9,16 +9,29 @@ const ALLOWED_CONTENT_TYPES = new Set([
   "image/gif",
 ]);
 
+export interface UploadableImage {
+  type: string;
+  size: number;
+  arrayBuffer(): Promise<ArrayBuffer>;
+}
+
 export interface UploadAssetInput {
   bucket: R2Bucket;
   username: string;
-  file: File;
+  file: UploadableImage;
   publicBaseUrl: string;
 }
 
-function buildObjectKey(username: string, file: File): string {
+function extensionForContentType(contentType: string): string {
+  if (contentType === "image/webp") return "webp";
+  if (contentType === "image/png") return "png";
+  if (contentType === "image/gif") return "gif";
+  return "jpg";
+}
+
+function buildObjectKey(username: string, contentType: string): string {
   const normalized = normalizeUsername(username);
-  const extension = file.type === "image/webp" ? "webp" : "jpg";
+  const extension = extensionForContentType(contentType);
   const timestamp = Date.now();
   const random = crypto.randomUUID().slice(0, 8);
   return `profiles/${normalized}/${timestamp}-${random}.${extension}`;
@@ -37,7 +50,7 @@ export async function uploadProfileAsset(
     throw new Error("Image exceeds the 512KB upload limit.");
   }
 
-  const key = buildObjectKey(username, file);
+  const key = buildObjectKey(username, file.type);
   const buffer = await file.arrayBuffer();
 
   await bucket.put(key, buffer, {

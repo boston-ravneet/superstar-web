@@ -1,5 +1,11 @@
-/** Video ads shown during free-tier profile build (before preview). */
+/** Video ads shown during free-tier first create (before preview). */
 export const BUILD_VIDEO_AD_COUNT = 3;
+
+/** Video ads when editing / rebuilding an existing stage. */
+export const EDIT_VIDEO_AD_COUNT = 2;
+
+/** Video ads before each design tweak on the preview screen. */
+export const REFINE_VIDEO_AD_COUNT = 1;
 
 /** Simulated ad length in dev when AdMob is not wired yet. */
 export const MOCK_VIDEO_AD_MS = __DEV__ ? 8_000 : 0;

@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   Keyboard,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -14,13 +15,14 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import * as Clipboard from "expo-clipboard";
 import { WebView } from "react-native-webview";
 import {
   fetchBuilderStatus,
   getPreviewProfileUrl,
   getPublicProfileUrl,
   publishProfileBuilder,
-  refineProfileBuilder,
   setBioDisplayMode,
 } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -29,7 +31,10 @@ import { colors } from "@/constants/theme";
 
 export default function PreviewScreen() {
   const router = useRouter();
-  const { profileId } = useLocalSearchParams<{ profileId: string }>();
+  const { profileId, refresh } = useLocalSearchParams<{
+    profileId: string;
+    refresh?: string;
+  }>();
   const { sessionToken, refreshProfiles } = useAuth();
   const { height: windowHeight } = useWindowDimensions();
   const [keyboardOpen, setKeyboardOpen] = useState(false);
@@ -58,18 +63,25 @@ export default function PreviewScreen() {
   const [previewVersion, setPreviewVersion] = useState(0);
   const [refinePrompt, setRefinePrompt] = useState("");
   const [loading, setLoading] = useState(true);
-  const [refining, setRefining] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [debugLog, setDebugLog] = useState<string | null>(null);
   const [useOriginalBio, setUseOriginalBio] = useState(false);
   const [togglingBio, setTogglingBio] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [viewAnalytics, setViewAnalytics] = useState<{
     totalViews: number;
     viewsLast7Days: number;
   } | null>(null);
+
+  useEffect(() => {
+    if (refresh) {
+      setPreviewVersion((version) => version + 1);
+      setRefinePrompt("");
+      setStatusMessage("Preview updated.");
+    }
+  }, [refresh]);
 
   useEffect(() => {
     async function loadPreview() {
@@ -87,17 +99,6 @@ export default function PreviewScreen() {
             viewsLast7Days: status.analytics.viewsLast7Days,
           });
         }
-        if (status.generationError) {
-          setStatusMessage(
-            `Using local builder (no AI): ${status.generationError}. Add GEMINI_API_KEY to .dev.vars and restart the web server.`,
-          );
-        }
-        const lastLog = status.recentGenerationLogs?.[0];
-        if (lastLog) {
-          setDebugLog(
-            `[${lastLog.event}] ${JSON.stringify(lastLog.detail ?? {}, null, 0).slice(0, 280)}`,
-          );
-        }
       } catch (loadError) {
         setError(
           loadError instanceof Error
@@ -112,46 +113,21 @@ export default function PreviewScreen() {
     loadPreview();
   }, [profileId, sessionToken]);
 
-  async function handleRefine() {
-    if (!profileId || !sessionToken || !refinePrompt.trim()) {
+  function handleApplyChangesPress() {
+    if (!profileId || !refinePrompt.trim()) {
       return;
     }
 
     Keyboard.dismiss();
-    setRefining(true);
     setError(null);
-    setStatusMessage("Sending tweak to AI…");
-
-    try {
-      const result = await refineProfileBuilder(
-        { profileId, prompt: refinePrompt.trim() },
-        sessionToken,
-      );
-
-      setRefinePrompt("");
-      setPreviewVersion((version) => version + 1);
-      const sourceLabel =
-        result.generationSource === "gemini" ? "AI (Gemini)" : "local builder";
-      setStatusMessage(
-        result.generationSource === "gemini"
-          ? "Preview updated with AI."
-          : `Preview updated with ${sourceLabel}${result.generationError ? `: ${result.generationError}` : ""}.`,
-      );
-      if (result.generationSource !== "gemini") {
-        setDebugLog(
-          `Refine used fallback${result.generationError ? `: ${result.generationError}` : ""}. Set GEMINI_API_KEY in superstar-web/.dev.vars`,
-        );
-      }
-    } catch (refineError) {
-      setError(
-        refineError instanceof Error
-          ? refineError.message
-          : "Unable to apply changes.",
-      );
-      setStatusMessage(null);
-    } finally {
-      setRefining(false);
-    }
+    router.push({
+      pathname: "/onboarding/generating",
+      params: {
+        profileId,
+        mode: "refine",
+        prompt: refinePrompt.trim(),
+      },
+    });
   }
 
   async function handleBioSourceToggle(nextValue: boolean) {
@@ -206,15 +182,25 @@ export default function PreviewScreen() {
     }
   }
 
+  async function handleCopyPublishedUrl() {
+    if (!publishedUrl) {
+      return;
+    }
+
+    await Clipboard.setStringAsync(publishedUrl);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  }
+
   if (loading) {
     return (
       <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator color={colors.fuchsia} />
+        <ActivityIndicator color={colors.primary} />
       </View>
     );
   }
 
-  const working = refining || publishing || togglingBio;
+  const working = publishing || togglingBio;
 
   return (
     <>
@@ -227,9 +213,31 @@ export default function PreviewScreen() {
         {publishedUrl ? (
           <View style={styles.successCard}>
             <Text style={styles.successTitle}>Your stage is live</Text>
-            <Text style={styles.successUrl}>{publishedUrl}</Text>
+            <View style={styles.urlRow}>
+              <Pressable
+                style={styles.urlLink}
+                onPress={() => Linking.openURL(publishedUrl)}
+                accessibilityRole="link"
+              >
+                <Text style={styles.successUrl}>{publishedUrl}</Text>
+              </Pressable>
+              <Pressable
+                style={styles.copyButton}
+                onPress={handleCopyPublishedUrl}
+                accessibilityLabel={linkCopied ? "Link copied" : "Copy link"}
+              >
+                <Ionicons
+                  name={linkCopied ? "checkmark" : "copy-outline"}
+                  size={18}
+                  color={linkCopied ? colors.success : colors.text}
+                />
+              </Pressable>
+            </View>
+            {linkCopied ? (
+              <Text style={styles.copiedHint}>Link copied to clipboard</Text>
+            ) : null}
             <Pressable
-              style={styles.primaryButton}
+              style={styles.successButton}
               onPress={() => router.replace("/dashboard")}
             >
               <Text style={styles.primaryButtonText}>Go to your stages</Text>
@@ -252,14 +260,6 @@ export default function PreviewScreen() {
                   startInLoadingState
                   cacheEnabled={false}
                 />
-                {refining ? (
-                  <View style={styles.refineOverlay}>
-                    <ActivityIndicator color={colors.fuchsia} size="large" />
-                    <Text style={styles.refineOverlayText}>
-                      AI is tweaking your design…
-                    </Text>
-                  </View>
-                ) : null}
               </View>
             ) : null}
 
@@ -273,7 +273,8 @@ export default function PreviewScreen() {
               <Text style={styles.sectionLabel}>Edit your preview</Text>
               <Text style={styles.panelHint}>
                 Scroll here to request design changes. Type what you want below,
-                then tap Apply changes.
+                then tap Apply changes — you&apos;ll watch a short video while AI
+                updates your page.
               </Text>
 
               <View style={styles.bioToggleRow}>
@@ -287,8 +288,8 @@ export default function PreviewScreen() {
                   value={useOriginalBio}
                   onValueChange={handleBioSourceToggle}
                   disabled={working}
-                  trackColor={{ false: colors.border, true: colors.fuchsia }}
-                  thumbColor={colors.text}
+                  trackColor={{ false: colors.border, true: colors.primary }}
+                  thumbColor={colors.onPrimary}
                 />
               </View>
 
@@ -305,19 +306,14 @@ export default function PreviewScreen() {
               {statusMessage ? (
                 <Text style={styles.statusMessage}>{statusMessage}</Text>
               ) : null}
-              {debugLog ? <Text style={styles.debugLog}>{debugLog}</Text> : null}
               {error ? <Text style={styles.error}>{error}</Text> : null}
               <View style={styles.actions}>
                 <Pressable
                   style={[styles.secondaryButton, working && styles.disabled]}
                   disabled={working || !refinePrompt.trim()}
-                  onPress={handleRefine}
+                  onPress={handleApplyChangesPress}
                 >
-                  {refining ? (
-                    <ActivityIndicator color={colors.text} />
-                  ) : (
-                    <Text style={styles.secondaryButtonText}>Apply changes</Text>
-                  )}
+                  <Text style={styles.secondaryButtonText}>Apply changes</Text>
                 </Pressable>
                 <Pressable
                   style={[styles.primaryButton, working && styles.disabled]}
@@ -325,7 +321,7 @@ export default function PreviewScreen() {
                   onPress={handlePublish}
                 >
                   {publishing ? (
-                    <ActivityIndicator color={colors.text} />
+                    <ActivityIndicator color={colors.onPrimary} />
                   ) : (
                     <Text style={styles.primaryButtonText}>Publish</Text>
                   )}
@@ -363,23 +359,12 @@ const styles = StyleSheet.create({
   webview: {
     flex: 1,
   },
-  refineOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(5,5,5,0.72)",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-  },
-  refineOverlayText: {
-    color: colors.text,
-    fontWeight: "600",
-  },
   panel: {
     padding: 16,
     backgroundColor: colors.surface,
   },
   sectionLabel: {
-    color: colors.fuchsia,
+    color: colors.muted,
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 0.6,
@@ -401,7 +386,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   analyticsText: {
-    color: colors.cyan,
+    color: colors.accent,
     fontSize: 13,
     fontWeight: "600",
     marginBottom: 10,
@@ -436,16 +421,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   statusMessage: {
-    color: colors.cyan,
+    color: colors.accent,
     fontSize: 13,
     marginBottom: 8,
-  },
-  debugLog: {
-    color: colors.muted,
-    fontSize: 11,
-    lineHeight: 15,
-    marginBottom: 8,
-    fontFamily: "Menlo",
   },
   actions: {
     flexDirection: "row",
@@ -453,13 +431,13 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     flex: 1,
-    backgroundColor: colors.fuchsia,
+    backgroundColor: colors.primary,
     borderRadius: 999,
     paddingVertical: 12,
     alignItems: "center",
   },
   primaryButtonText: {
-    color: colors.text,
+    color: colors.onPrimary,
     fontWeight: "700",
   },
   secondaryButton: {
@@ -493,9 +471,42 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     textAlign: "center",
   },
+  urlRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+  },
+  urlLink: {
+    flex: 1,
+  },
   successUrl: {
     color: colors.text,
     textAlign: "center",
-    marginBottom: 20,
+    fontWeight: "600",
+    textDecorationLine: "underline",
+  },
+  copyButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  copiedHint: {
+    color: colors.success,
+    fontSize: 13,
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  successButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 999,
+    paddingVertical: 16,
+    alignItems: "center",
+    marginTop: 12,
   },
 });

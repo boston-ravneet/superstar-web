@@ -1,10 +1,14 @@
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
 
+const DEFAULT_TIMEOUT_MS = 90_000;
+const UPLOAD_TIMEOUT_MS = 180_000;
+
 async function request<T>(
   path: string,
   init?: RequestInit,
   token?: string | null,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
 ): Promise<T> {
   const url = `${API_BASE_URL}${path}`;
   const headers = new Headers(init?.headers);
@@ -17,16 +21,34 @@ async function request<T>(
     headers.set("Content-Type", "application/json");
   }
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
   let response: Response;
   try {
-    response = await fetch(url, { ...init, headers });
-  } catch {
+    response = await fetch(url, { ...init, headers, signal: controller.signal });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(
+        "The request timed out. Check your connection and try again.",
+      );
+    }
     throw new Error(
       `Network request failed. Ensure the web server is running and EXPO_PUBLIC_API_URL (${API_BASE_URL}) is reachable from your device.`,
     );
+  } finally {
+    clearTimeout(timeout);
   }
 
-  const payload = (await response.json()) as T & { error?: string; code?: string };
+  const raw = await response.text();
+  let payload: T & { error?: string; code?: string };
+  try {
+    payload = (raw ? JSON.parse(raw) : {}) as T & { error?: string; code?: string };
+  } catch {
+    throw new Error(
+      `Server returned an unexpected response (${response.status}). Try again in a moment.`,
+    );
+  }
 
   if (!response.ok) {
     throw new Error(payload.error ?? `Request failed with status ${response.status}`);
@@ -81,6 +103,26 @@ export async function fetchMyProfiles(sessionToken: string) {
   );
 }
 
+export async function fetchAccount(sessionToken: string) {
+  return request<{ account: import("@/types/account").AccountPublicView }>(
+    "/api/account",
+    { method: "GET" },
+    sessionToken,
+  );
+}
+
+export async function acceptTerms(sessionToken: string) {
+  return request<{ account: import("@/types/account").AccountPublicView }>(
+    "/api/account/accept-terms",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    },
+    sessionToken,
+  );
+}
+
 export async function registerProfile(
   payload: import("@/types/profile").RegistrationPayload,
   sessionToken: string,
@@ -112,6 +154,8 @@ export async function uploadProfileImage(input: {
   const formData = new FormData();
   formData.append("username", input.username);
   formData.append("uploadToken", input.uploadToken);
+  formData.append("contentType", input.mimeType);
+  formData.append("fileName", input.fileName);
   formData.append(
     "file",
     {
@@ -121,10 +165,23 @@ export async function uploadProfileImage(input: {
     } as unknown as Blob,
   );
 
-  return request<import("@/types/profile").UploadResponse>("/api/upload", {
-    method: "POST",
-    body: formData,
-  });
+  return request<import("@/types/profile").UploadResponse>(
+    "/api/upload",
+    {
+      method: "POST",
+      body: formData,
+    },
+    null,
+    UPLOAD_TIMEOUT_MS,
+  );
+}
+
+export async function deleteAccount(sessionToken: string) {
+  return request<{ deleted: boolean }>(
+    "/api/account",
+    { method: "DELETE" },
+    sessionToken,
+  );
 }
 
 export function getPublicProfileUrl(username: string): string {
@@ -195,6 +252,7 @@ export async function fetchBuilderStatus(profileId: string, sessionToken: string
       displayName: string;
       username: string;
       socialAccounts?: import("@/lib/social/accounts").SocialAccount[];
+      preferredArchetypeId?: string;
     } | null;
     previewUrl: string | null;
     publicUrl: string | null;

@@ -32,6 +32,7 @@ import { isValidShowreelUrl } from "@/lib/media/showreel-url";
 import {
   getOnboardingState,
   patchOnboardingState,
+  resetOnboardingState,
 } from "@/lib/state/onboarding";
 import {
   patchSocialDraft,
@@ -62,7 +63,22 @@ export default function BuildStageScreen() {
   const [showreelUrls, setShowreelUrls] = useState(initial.showreelUrls);
   const [portfolioUris, setPortfolioUris] = useState(initial.portfolioUris);
   const [submitting, setSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  function handleGoBack() {
+    if (isEdit) {
+      resetOnboardingState();
+      router.replace("/dashboard");
+      return;
+    }
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+    resetOnboardingState();
+    router.replace("/dashboard");
+  }
 
   async function pickHeadshot() {
     setError(null);
@@ -83,9 +99,20 @@ export default function BuildStageScreen() {
       return;
     }
 
-    const compressed = await compressImageToWebp(result.assets[0].uri);
-    setHeadshotUri(compressed.uri);
-    patchOnboardingState({ headshotUri: compressed.uri });
+    try {
+      const compressed = await compressImageToWebp(result.assets[0].uri);
+      setHeadshotUri(compressed.uri);
+      patchOnboardingState({
+        headshotUri: compressed.uri,
+        headshotPublicUrl: null,
+      });
+    } catch (compressError) {
+      setError(
+        compressError instanceof Error
+          ? compressError.message
+          : "Unable to process that photo. Try another image.",
+      );
+    }
   }
 
   async function pickPortfolioImage(index: number) {
@@ -107,11 +134,21 @@ export default function BuildStageScreen() {
       return;
     }
 
-    const compressed = await compressImageToWebp(result.assets[0].uri);
-    const next = [...portfolioUris] as PortfolioSlots;
-    next[index] = compressed.uri;
-    setPortfolioUris(next);
-    patchOnboardingState({ portfolioUris: next });
+    try {
+      const compressed = await compressImageToWebp(result.assets[0].uri);
+      const next = [...portfolioUris] as PortfolioSlots;
+      const nextPublic = [...getOnboardingState().portfolioPublicUrls] as PortfolioSlots;
+      next[index] = compressed.uri;
+      nextPublic[index] = null;
+      setPortfolioUris(next);
+      patchOnboardingState({ portfolioUris: next, portfolioPublicUrls: nextPublic });
+    } catch (compressError) {
+      setError(
+        compressError instanceof Error
+          ? compressError.message
+          : "Unable to process that photo. Try another image.",
+      );
+    }
   }
 
   function updateShowreelUrl(index: 0 | 1, value: string) {
@@ -124,6 +161,7 @@ export default function BuildStageScreen() {
   async function handleContinue() {
     Keyboard.dismiss();
     setSubmitting(true);
+    setSubmitStatus(null);
     setError(null);
 
     const state = getOnboardingState();
@@ -178,6 +216,7 @@ export default function BuildStageScreen() {
       const socialAccounts = socialAccountsFromDrafts(socialHandleDrafts);
 
       if (!profileId) {
+        setSubmitStatus("Creating your profile…");
         const registration = await registerProfile(
           {
             username: state.username,
@@ -204,6 +243,7 @@ export default function BuildStageScreen() {
         if (isRemoteUrl(headshotUri)) {
           headshotPublicUrl = headshotUri;
         } else {
+          setSubmitStatus("Uploading headshot…");
           const token = await requestUploadToken(state.username);
           const upload = await uploadProfileImage({
             username: state.username,
@@ -213,6 +253,7 @@ export default function BuildStageScreen() {
             fileName: `${state.username}-headshot.webp`,
           });
           headshotPublicUrl = upload.publicUrl;
+          patchOnboardingState({ headshotPublicUrl: upload.publicUrl });
         }
       }
 
@@ -227,6 +268,7 @@ export default function BuildStageScreen() {
           continue;
         }
 
+        setSubmitStatus(`Uploading photo ${index + 1}…`);
         const token = await requestUploadToken(state.username);
         const upload = await uploadProfileImage({
           username: state.username,
@@ -236,8 +278,10 @@ export default function BuildStageScreen() {
           fileName: `${state.username}-portfolio-${index + 1}.webp`,
         });
         publicUrls[index] = upload.publicUrl;
+        patchOnboardingState({ portfolioPublicUrls: [...publicUrls] });
       }
 
+      setSubmitStatus("Starting AI build…");
       patchOnboardingState({
         bio: bio.trim(),
         designInstructions: designInstructions.trim(),
@@ -261,6 +305,7 @@ export default function BuildStageScreen() {
       );
     } finally {
       setSubmitting(false);
+      setSubmitStatus(null);
     }
   }
 
@@ -269,6 +314,14 @@ export default function BuildStageScreen() {
       <Stack.Screen
         options={{
           title: isEdit ? "Edit your stage" : "Build your stage",
+          headerBackVisible: false,
+          headerLeft: () => (
+            <Pressable onPress={handleGoBack} hitSlop={12} style={styles.headerButton}>
+              <Text style={styles.headerButtonText}>
+                {isEdit ? "Cancel" : "Back"}
+              </Text>
+            </Pressable>
+          ),
         }}
       />
       <KeyboardAwareScreen contentContainerStyle={styles.container}>
@@ -442,10 +495,11 @@ export default function BuildStageScreen() {
         </View>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
+        {submitStatus ? <Text style={styles.status}>{submitStatus}</Text> : null}
 
         <Pressable style={styles.submitButton} onPress={handleContinue}>
           {submitting ? (
-            <ActivityIndicator color={colors.text} />
+            <ActivityIndicator color={colors.onPrimary} />
           ) : (
             <Text style={styles.submitButtonText}>
               {isEdit ? "Rebuild my page" : "Create my page"}
@@ -455,7 +509,7 @@ export default function BuildStageScreen() {
 
         <Text style={styles.note}>
           Free tier: watch 3 short videos while our AI builds your page (about
-          90 seconds). Upgrade later for instant builds with no ads.
+          90 seconds).
         </Text>
       </KeyboardAwareScreen>
     </>
@@ -463,13 +517,22 @@ export default function BuildStageScreen() {
 }
 
 const styles = StyleSheet.create({
+  headerButton: {
+    paddingHorizontal: 4,
+    paddingVertical: 6,
+  },
+  headerButtonText: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: "400",
+  },
   container: {
     flexGrow: 1,
     backgroundColor: colors.background,
     padding: 24,
   },
   handleLabel: {
-    color: colors.fuchsia,
+    color: colors.muted,
     fontWeight: "800",
     fontSize: 18,
     marginBottom: 8,
@@ -619,14 +682,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   submitButton: {
-    backgroundColor: colors.fuchsia,
+    backgroundColor: colors.primary,
     borderRadius: 999,
     paddingVertical: 14,
     alignItems: "center",
     marginTop: 8,
   },
   submitButtonText: {
-    color: colors.text,
+    color: colors.onPrimary,
     fontWeight: "700",
     fontSize: 16,
   },
@@ -639,6 +702,11 @@ const styles = StyleSheet.create({
   },
   error: {
     color: colors.danger,
+    marginBottom: 12,
+  },
+  status: {
+    color: colors.muted,
+    textAlign: "center",
     marginBottom: 12,
   },
 });

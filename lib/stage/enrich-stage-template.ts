@@ -21,6 +21,8 @@ import {
   portfolioGalleryImages,
   showreelSectionVideos,
 } from "@/lib/stage/media-sections";
+import { applyRichBioSections } from "@/lib/stage/apply-rich-bio-sections";
+import { ensureReadablePalette } from "@/lib/stage/ensure-readable-palette";
 
 export function normalizeBuilderInput(
   raw: unknown,
@@ -332,8 +334,13 @@ export function finalizeStageTemplate(
     return section;
   });
 
-  return {
-    ...template,
-    sections,
-  };
+  return ensureReadablePalette(
+    applyRichBioSections(
+      {
+        ...template,
+        sections,
+      },
+      input.bio,
+    ),
+  );
 }

@@ -6,6 +6,8 @@ export interface AccountRecord {
   display_name: string | null;
   auth_provider: AccountAuthProvider;
   auth_subject: string;
+  terms_accepted_at: string | null;
+  terms_version: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -15,6 +17,9 @@ export interface AccountPublicView {
   email: string | null;
   displayName: string | null;
   authProvider: AccountAuthProvider;
+  termsAcceptedAt: string | null;
+  termsVersion: string | null;
+  requiresTermsAcceptance: boolean;
 }
 
 export interface AccountAuthResponse {

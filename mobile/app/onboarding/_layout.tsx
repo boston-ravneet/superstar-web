@@ -16,7 +16,7 @@ export default function OnboardingLayout() {
           backgroundColor: colors.background,
         }}
       >
-        <ActivityIndicator color={colors.fuchsia} />
+        <ActivityIndicator color={colors.primary} />
       </View>
     );
   }
@@ -30,6 +30,11 @@ export default function OnboardingLayout() {
       screenOptions={{
         headerShown: true,
         headerBackTitle: "Back",
+        headerStyle: { backgroundColor: colors.background },
+        headerTintColor: colors.text,
+        headerTitleStyle: { color: colors.text, fontWeight: "600" },
+        headerShadowVisible: false,
+        contentStyle: { backgroundColor: colors.background },
       }}
     />
   );

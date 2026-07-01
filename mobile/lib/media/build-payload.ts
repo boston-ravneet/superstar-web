@@ -8,6 +8,32 @@ import {
 } from "@/lib/media/constants";
 import type { OnboardingState } from "@/lib/state/onboarding";
 
+function isRemoteUrl(uri: string): boolean {
+  return uri.startsWith("http://") || uri.startsWith("https://");
+}
+
+function resolveHeadshotPublicUrl(state: OnboardingState): string {
+  const uploaded = state.headshotPublicUrl?.trim();
+  if (uploaded) {
+    return uploaded;
+  }
+
+  const localOrRemote = state.headshotUri?.trim();
+  if (localOrRemote && isRemoteUrl(localOrRemote)) {
+    return localOrRemote;
+  }
+
+  return "";
+}
+
+function resolvePortfolioSlots(state: OnboardingState): PortfolioSlots {
+  if (state.portfolioPublicUrls.some(Boolean)) {
+    return state.portfolioPublicUrls;
+  }
+
+  return state.portfolioUris;
+}
+
 export interface BuilderMediaPayload {
   headshotUrl: string;
   showreelVideos: Array<{ url: string; title?: string }>;
@@ -73,10 +99,11 @@ export function buildSubmitMedia(state: OnboardingState): {
   media: BuilderMediaPayload;
   imageUrls: string[];
 } {
-  const headshotUrl = state.headshotPublicUrl?.trim() ?? "";
-  const portfolioImages = state.portfolioPublicUrls
+  const headshotUrl = resolveHeadshotPublicUrl(state);
+  const portfolioSlots = resolvePortfolioSlots(state);
+  const portfolioImages = portfolioSlots
     .map((url) => url?.trim())
-    .filter((url): url is string => Boolean(url))
+    .filter((url): url is string => Boolean(url && isRemoteUrl(url)))
     .map((url) => ({ url }));
   const showreelVideos = state.showreelUrls
     .map((url) => url.trim())
@@ -103,15 +130,34 @@ export function countFilledPortfolio(slots: PortfolioSlots): number {
 }
 
 export function validateMediaState(state: OnboardingState): string | null {
-  const hasHeadshot = Boolean(state.headshotUri || state.headshotPublicUrl);
-  if (!hasHeadshot) {
-    return "Upload a profile headshot (square photo).";
+  const hasHeadshotSelected = Boolean(
+    state.headshotUri?.trim() || state.headshotPublicUrl?.trim(),
+  );
+  if (!hasHeadshotSelected) {
+    return "Add a profile headshot (square photo works best).";
   }
 
-  const portfolioSlots = state.portfolioPublicUrls.some(Boolean)
-    ? state.portfolioPublicUrls
-    : state.portfolioUris;
+  const portfolioSlots = state.portfolioUris.some(Boolean)
+    ? state.portfolioUris
+    : state.portfolioPublicUrls;
   const portfolioCount = countFilledPortfolio(portfolioSlots);
+  if (portfolioCount < PORTFOLIO_MIN) {
+    return `Add at least ${PORTFOLIO_MIN} portfolio photos (up to ${PORTFOLIO_MAX}).`;
+  }
+
+  return null;
+}
+
+export function validateUploadedMediaState(state: OnboardingState): string | null {
+  const headshotUrl = resolveHeadshotPublicUrl(state);
+  if (!headshotUrl) {
+    return "Your headshot did not upload. Go back and tap Create my page again.";
+  }
+
+  const portfolioCount = state.portfolioPublicUrls.filter(
+    (url) => Boolean(url?.trim()) && isRemoteUrl(url!.trim()),
+  ).length;
+
   if (portfolioCount < PORTFOLIO_MIN) {
     return `Add at least ${PORTFOLIO_MIN} portfolio photos (up to ${PORTFOLIO_MAX}).`;
   }

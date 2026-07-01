@@ -1,0 +1,100 @@
+/* Public stage template — responsive layout beyond the 720px mobile canvas */
+
+.stage-template-inner {
+  width: 100%;
+  max-width: var(--stage-max-width, 720px);
+  margin: 0 auto;
+}
+
+@media (min-width: 960px) {
+  .stage-template-shell {
+    --stage-max-width: 1140px;
+  }
+
+  .stage-template-inner {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+
+  /* Hero: side-by-side on wide screens when stacked on mobile */
+  .stage-hero-section {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 32px !important;
+    padding-top: 56px !important;
+    padding-bottom: 36px !important;
+  }
+
+  .stage-hero-section .stage-hero-avatar {
+    width: 160px !important;
+    height: 160px !important;
+    flex-shrink: 0;
+  }
+
+  .stage-hero-section .stage-hero-text {
+    align-items: flex-start !important;
+    text-align: left !important;
+  }
+
+  .stage-hero-section .stage-hero-text h1 {
+    text-align: left !important;
+    font-size: clamp(2.25rem, 4vw, 3.25rem) !important;
+  }
+
+  .stage-hero-section .stage-hero-text p {
+    text-align: left !important;
+    max-width: 640px !important;
+  }
+
+  /* Gallery carousel → multi-column grid on desktop */
+  .stage-gallery-track {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)) !important;
+    gap: 20px !important;
+    overflow-x: visible !important;
+    scroll-snap-type: none !important;
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+
+  .stage-gallery-slide {
+    flex: none !important;
+    max-width: none !important;
+    scroll-snap-align: unset !important;
+  }
+
+  .stage-gallery-slide .stage-gallery-media {
+    height: 280px !important;
+  }
+
+  /* Standard grid galleries breathe on desktop */
+  .stage-gallery-grid {
+    gap: 20px !important;
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+
+  .stage-gallery-grid .stage-gallery-media {
+    height: 280px !important;
+  }
+
+  .stage-section-heading {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+    font-size: 1.35rem !important;
+  }
+
+  .stage-bio-card,
+  .stage-skills-wrap,
+  .stage-showreel-wrap {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+
+  .stage-cta-row {
+    justify-content: flex-start !important;
+    flex-wrap: wrap !important;
+    gap: 14px !important;
+  }
+}

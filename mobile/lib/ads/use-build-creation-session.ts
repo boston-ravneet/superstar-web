@@ -3,6 +3,7 @@ import { submitProfileBuilder } from "@/lib/api/client";
 import {
   BUILD_AI_STATUS_MESSAGES,
   BUILD_VIDEO_AD_COUNT,
+  EDIT_VIDEO_AD_COUNT,
 } from "@/lib/ads/constants";
 import type { VideoAdOutcome } from "@/lib/ads/video-ad-provider";
 import { getOnboardingState } from "@/lib/state/onboarding";
@@ -10,9 +11,11 @@ import { socialAccountsFromDrafts } from "@/lib/social/accounts";
 import {
   buildSubmitMedia,
   validateMediaState,
+  validateUploadedMediaState,
 } from "@/lib/media/build-payload";
 
 export type BuildSessionPhase =
+  | "idle"
   | "intro"
   | "video-ad"
   | "ai-working"
@@ -22,15 +25,20 @@ export type BuildSessionPhase =
 interface BuildSessionInput {
   profileId?: string;
   sessionToken?: string | null;
+  enabled?: boolean;
+  isEdit?: boolean;
   onReady: () => void;
 }
 
 export function useBuildCreationSession({
   profileId,
   sessionToken,
+  enabled = true,
+  isEdit = false,
   onReady,
 }: BuildSessionInput) {
-  const [phase, setPhase] = useState<BuildSessionPhase>("intro");
+  const adTotal = isEdit ? EDIT_VIDEO_AD_COUNT : BUILD_VIDEO_AD_COUNT;
+  const [phase, setPhase] = useState<BuildSessionPhase>("idle");
   const [adIndex, setAdIndex] = useState(0);
   const [adsCompleted, setAdsCompleted] = useState(0);
   const [aiMessageIndex, setAiMessageIndex] = useState(0);
@@ -59,7 +67,7 @@ export function useBuildCreationSession({
 
   useEffect(() => {
     async function runSession() {
-      if (startedRef.current || !profileId || !sessionToken) {
+      if (!enabled || startedRef.current || !profileId || !sessionToken) {
         return;
       }
 
@@ -68,7 +76,7 @@ export function useBuildCreationSession({
       const { media, imageUrls } = buildSubmitMedia(state);
       const socialAccounts = socialAccountsFromDrafts(state.socialHandleDrafts);
 
-      const mediaError = validateMediaState(state);
+      const mediaError = validateUploadedMediaState(state);
       if (mediaError || imageUrls.length === 0) {
         setError(mediaError ?? "Missing uploaded photos. Go back and try again.");
         setPhase("error");
@@ -100,7 +108,7 @@ export function useBuildCreationSession({
               : "We could not build your stage.";
         });
 
-      for (let slot = 0; slot < BUILD_VIDEO_AD_COUNT; slot += 1) {
+      for (let slot = 0; slot < adTotal; slot += 1) {
         setAdIndex(slot);
         setPhase("video-ad");
 
@@ -109,14 +117,18 @@ export function useBuildCreationSession({
         });
 
         if (outcome !== "completed") {
-          setError("Please watch the video to continue your free build.");
+          setError(
+            outcome === "unavailable"
+              ? "Video ad could not load. Tap Go back, then try Create my page again in a few minutes."
+              : "Please watch the full video to continue your free build.",
+          );
           setPhase("error");
           return;
         }
 
         setAdsCompleted(slot + 1);
 
-        if (slot < BUILD_VIDEO_AD_COUNT - 1) {
+        if (slot < adTotal - 1) {
           setPhase("ai-working");
           await delay(1200);
         }
@@ -135,13 +147,26 @@ export function useBuildCreationSession({
     }
 
     runSession();
-  }, [profileId, sessionToken]);
+  }, [adTotal, enabled, profileId, sessionToken]);
+
+  if (!enabled) {
+    return {
+      phase: "idle" as const,
+      adIndex: 0,
+      adsCompleted: 0,
+      adTotal,
+      aiMessage: BUILD_AI_STATUS_MESSAGES[0],
+      apiDone: false,
+      error: null,
+      completeVideoAd,
+    };
+  }
 
   return {
     phase,
     adIndex,
     adsCompleted,
-    adTotal: BUILD_VIDEO_AD_COUNT,
+    adTotal,
     aiMessage: BUILD_AI_STATUS_MESSAGES[aiMessageIndex],
     apiDone,
     error,

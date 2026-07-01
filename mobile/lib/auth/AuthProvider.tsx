@@ -17,7 +17,11 @@ import {
   saveAccountSession,
   type StoredAccountSession,
 } from "@/lib/auth/storage";
-import { GoogleAuthBridge } from "@/lib/auth/GoogleAuthBridge";
+import { GoogleAuthBridge, shouldUseGoogleAuthBridge } from "@/lib/auth/GoogleAuthBridge";
+import {
+  configureNativeGoogleSignIn,
+  signInWithGoogleNative,
+} from "@/lib/auth/googleSignInNative";
 import {
   getGoogleAuthClientConfig,
   isGoogleAuthConfigured,
@@ -27,6 +31,9 @@ import {
   loginWithDev,
   loginWithGoogle,
   fetchMyProfiles,
+  fetchAccount,
+  acceptTerms as acceptTermsApi,
+  deleteAccount as deleteAccountApi,
 } from "@/lib/api/client";
 import type { AccountProfileSummary, AccountPublicView } from "@/types/account";
 
@@ -42,7 +49,9 @@ interface AuthContextValue {
   signInWithApple: () => Promise<void>;
   signInWithDev: () => Promise<void>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   refreshProfiles: () => Promise<void>;
+  acceptTerms: () => Promise<void>;
   sessionToken: string | null;
 }
 
@@ -62,6 +71,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccount(session.account);
     setSessionToken(session.sessionToken);
   }, []);
+
+  const refreshAccountFromServer = useCallback(async (token: string) => {
+    const response = await fetchAccount(token);
+    setAccount(response.account);
+    const stored = await loadAccountSession();
+    if (stored) {
+      await saveAccountSession({
+        ...stored,
+        account: response.account,
+      });
+    }
+    return response.account;
+  }, []);
+
+  const acceptTerms = useCallback(async () => {
+    const stored = await loadAccountSession();
+    const token = sessionToken ?? stored?.sessionToken;
+    if (!token) {
+      throw new Error("Sign in to accept the Terms & Conditions.");
+    }
+
+    const response = await acceptTermsApi(token);
+    await applySession({
+      account: response.account,
+      sessionToken: token,
+      expiresAt: stored?.expiresAt ?? Date.now() + 86_400_000,
+    });
+  }, [applySession, sessionToken]);
 
   const completeGoogleLogin = useCallback(
     async (idToken: string) => {
@@ -98,14 +135,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [sessionToken]);
 
   useEffect(() => {
+    if (Platform.OS === "android" && googleAuthConfig?.webClientId) {
+      configureNativeGoogleSignIn(googleAuthConfig.webClientId);
+    }
+  }, [googleAuthConfig?.webClientId]);
+
+  useEffect(() => {
     async function bootstrap() {
       const stored = await loadAccountSession();
       if (stored) {
         setAccount(stored.account);
         setSessionToken(stored.sessionToken);
         try {
+          const account = await refreshAccountFromServer(stored.sessionToken);
           const response = await fetchMyProfiles(stored.sessionToken);
           setProfiles(response.profiles);
+          setAccount(account);
         } catch {
           await clearAccountSession();
           setAccount(null);
@@ -117,7 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     bootstrap();
-  }, []);
+  }, [refreshAccountFromServer]);
 
   const signInWithGoogle = useCallback(async () => {
     if (!isGoogleAuthConfigured()) {
@@ -126,13 +171,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
     }
 
+    if (Platform.OS === "android") {
+      const idToken = await signInWithGoogleNative();
+      await completeGoogleLogin(idToken);
+      return;
+    }
+
     const prompt = googlePromptRef.current;
     if (!prompt) {
       throw new Error("Google Sign-In is still initializing. Try again.");
     }
 
     await prompt();
-  }, []);
+  }, [completeGoogleLogin]);
 
   const signInWithApple = useCallback(async () => {
     if (Platform.OS !== "ios") {
@@ -192,6 +243,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfiles([]);
   }, []);
 
+  const deleteAccount = useCallback(async () => {
+    if (!sessionToken) {
+      throw new Error("Sign in to delete your account.");
+    }
+
+    await deleteAccountApi(sessionToken);
+    await signOut();
+  }, [sessionToken, signOut]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       account,
@@ -203,7 +263,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithApple,
       signInWithDev,
       signOut,
+      deleteAccount,
       refreshProfiles,
+      acceptTerms,
       sessionToken,
     }),
     [
@@ -215,14 +277,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithApple,
       signInWithDev,
       signOut,
+      deleteAccount,
       refreshProfiles,
+      acceptTerms,
       sessionToken,
     ],
   );
 
   return (
     <AuthContext.Provider value={value}>
-      {googleAuthConfig ? (
+      {googleAuthConfig && shouldUseGoogleAuthBridge() ? (
         <GoogleAuthBridge
           config={googleAuthConfig}
           onIdToken={completeGoogleLogin}

@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Platform } from "react-native";
 import * as Google from "expo-auth-session/providers/google";
 import type { GoogleAuthClientConfig } from "@/lib/auth/googleConfig";
 
@@ -8,6 +9,7 @@ interface GoogleAuthBridgeProps {
   onPromptReady: (prompt: () => Promise<unknown>) => void;
 }
 
+/** iOS browser OAuth via expo-auth-session. Android uses native SDK in AuthProvider. */
 export function GoogleAuthBridge({
   config,
   onIdToken,
@@ -15,7 +17,6 @@ export function GoogleAuthBridge({
 }: GoogleAuthBridgeProps) {
   const [, googleResponse, promptGoogleAsync] = Google.useAuthRequest({
     iosClientId: config.iosClientId,
-    androidClientId: config.androidClientId,
     webClientId: config.webClientId,
   });
 
@@ -41,4 +42,8 @@ export function GoogleAuthBridge({
   }, [googleResponse, onIdToken]);
 
   return null;
+}
+
+export function shouldUseGoogleAuthBridge(): boolean {
+  return Platform.OS === "ios";
 }

@@ -80,6 +80,10 @@ function scoreArchetype(
         score += 3;
         reasons.push("Minimal / clean brief");
       }
+      if (/\b(developer|engineer|architect|software|technical|front.?end|javascript|angular)\b/i.test(haystack)) {
+        score += 4;
+        reasons.push("Professional / technical profile");
+      }
       break;
     case "gold-ledger":
       if (isLuxury(hints)) {
@@ -126,6 +130,9 @@ function verticalFromHaystack(haystack: string): string {
   }
   if (/\b(creator|content|influencer|stream)\b/i.test(haystack)) {
     return "creator";
+  }
+  if (/\b(developer|engineer|architect|software|technical|front.?end|programmer)\b/i.test(haystack)) {
+    return "technology";
   }
   if (/\b(student|grade|school|vcms)\b/i.test(haystack)) {
     return "student";

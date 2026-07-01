@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
   screen: {
     minHeight: 200,
     borderRadius: 16,
-    backgroundColor: "#0a0a0f",
+    backgroundColor: colors.primary,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: "center",
@@ -121,25 +121,25 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   playHint: {
-    color: colors.text,
+    color: colors.onPrimary,
     fontSize: 20,
     fontWeight: "800",
   },
   subHint: {
-    color: colors.muted,
+    color: "#a3a3a3",
     textAlign: "center",
     lineHeight: 20,
     fontSize: 14,
   },
   playButton: {
     marginTop: 8,
-    backgroundColor: colors.fuchsia,
+    backgroundColor: colors.onPrimary,
     borderRadius: 999,
     paddingHorizontal: 22,
     paddingVertical: 12,
   },
   playButtonText: {
-    color: colors.text,
+    color: colors.primary,
     fontWeight: "700",
   },
   progressTrack: {
@@ -151,15 +151,15 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: "100%",
-    backgroundColor: colors.cyan,
+    backgroundColor: colors.onPrimary,
   },
   countdown: {
-    color: colors.text,
+    color: colors.onPrimary,
     fontSize: 28,
     fontWeight: "800",
   },
   playingCopy: {
-    color: colors.muted,
+    color: "#a3a3a3",
     fontSize: 13,
     textAlign: "center",
   },

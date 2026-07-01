@@ -8,6 +8,7 @@ import type {
 import { parseLayoutConfig } from "@/lib/stage/parse-layout-config";
 import { parseStageTemplate } from "@/lib/stage/parse-stage-template";
 import { parseSocialLinksPayload } from "@/lib/stage/parse-social-links";
+import { refreshLiveTemplate } from "@/lib/stage/refresh-live-template";
 import type { PublishStatus } from "@/lib/types/stage-template";
 
 function mapVideos(entries: StageVideo[] | undefined): StageVideo[] {
@@ -119,14 +120,33 @@ export function buildStageProfileView(record: ProfileRecord): StageProfileView {
   const publishStatus: PublishStatus =
     record.publish_status ?? "published";
 
-  const stageTemplate = parseStageTemplate(record.stage_template_json ?? null);
+  const stageTemplateRaw = parseStageTemplate(record.stage_template_json ?? null);
   const publishedTemplate = parseStageTemplate(
     record.published_stage_template_json ?? null,
   );
-  const liveStageTemplate =
+
+  const refreshContext = {
+    bio: record.bio ?? "",
+    displayName: record.display_name ?? record.username,
+    username: record.username,
+    instagramHandle: record.instagram_handle,
+    tiktokHandle: record.tiktok_handle,
+    socialLinksJson: record.social_links_json,
+    imageUrls: photos.map((photo) => photo.url),
+  };
+
+  const stageTemplate = stageTemplateRaw
+    ? refreshLiveTemplate(stageTemplateRaw, refreshContext)
+    : null;
+
+  const rawLiveTemplate =
     publishStatus === "published"
-      ? (publishedTemplate ?? stageTemplate)
-      : stageTemplate;
+      ? (publishedTemplate ?? stageTemplateRaw)
+      : stageTemplateRaw;
+
+  const liveStageTemplate = rawLiveTemplate
+    ? refreshLiveTemplate(rawLiveTemplate, refreshContext)
+    : null;
 
   return {
     id: record.id,

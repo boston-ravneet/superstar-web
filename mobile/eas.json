@@ -15,7 +15,11 @@
         "EXPO_PUBLIC_WEB_URL": "https://getsuperstar.info",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "753240227728-o7e8dtqeg2otvh992h2dqpqecfrokhe4.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "753240227728-dtk5magac6psgtmve5ui9nbhqqnerbi7.apps.googleusercontent.com",
-        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "753240227728-gapm38qpu4a4hudt8kghdvtacfemld6i.apps.googleusercontent.com"
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "753240227728-gapm38qpu4a4hudt8kghdvtacfemld6i.apps.googleusercontent.com",
+        "EXPO_PUBLIC_ADMOB_IOS_APP_ID": "ca-app-pub-2673488651987160~5227499848",
+        "EXPO_PUBLIC_ADMOB_IOS_REWARDED_UNIT_ID": "ca-app-pub-2673488651987160/8253118436",
+        "EXPO_PUBLIC_ADMOB_ANDROID_APP_ID": "ca-app-pub-2673488651987160~5095105075",
+        "EXPO_PUBLIC_ADMOB_ANDROID_REWARDED_UNIT_ID": "ca-app-pub-2673488651987160/1735656018"
       }
     },
     "production": {
@@ -25,11 +29,25 @@
         "EXPO_PUBLIC_WEB_URL": "https://getsuperstar.info",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "753240227728-o7e8dtqeg2otvh992h2dqpqecfrokhe4.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "753240227728-dtk5magac6psgtmve5ui9nbhqqnerbi7.apps.googleusercontent.com",
-        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "753240227728-gapm38qpu4a4hudt8kghdvtacfemld6i.apps.googleusercontent.com"
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "753240227728-gapm38qpu4a4hudt8kghdvtacfemld6i.apps.googleusercontent.com",
+        "EXPO_PUBLIC_ADMOB_IOS_APP_ID": "ca-app-pub-2673488651987160~5227499848",
+        "EXPO_PUBLIC_ADMOB_IOS_REWARDED_UNIT_ID": "ca-app-pub-2673488651987160/8253118436",
+        "EXPO_PUBLIC_ADMOB_ANDROID_APP_ID": "ca-app-pub-2673488651987160~5095105075",
+        "EXPO_PUBLIC_ADMOB_ANDROID_REWARDED_UNIT_ID": "ca-app-pub-2673488651987160/1735656018"
       }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleTeamId": "NF2SAY2CK9",
+        "ascAppId": "6782732151"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-play-service-account.json",
+        "track": "alpha",
+        "releaseStatus": "draft"
+      }
+    }
   }
 }

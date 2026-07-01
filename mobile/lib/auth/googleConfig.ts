@@ -19,7 +19,7 @@ export function getGoogleAuthClientConfig(): GoogleAuthClientConfig | null {
   }
 
   if (Platform.OS === "android") {
-    if (!androidClientId) {
+    if (!androidClientId || !webClientId) {
       return null;
     }
     return { iosClientId, androidClientId, webClientId };

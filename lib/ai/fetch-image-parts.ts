@@ -62,10 +62,12 @@ async function loadImageBytes(
 
 export async function fetchImagePartsForGemini(
   imageUrls: string[],
+  maxImages = MAX_IMAGES,
 ): Promise<GeminiImagePart[]> {
   const parts: GeminiImagePart[] = [];
+  const limit = Math.max(1, Math.min(maxImages, imageUrls.length));
 
-  for (const [index, url] of imageUrls.slice(0, MAX_IMAGES).entries()) {
+  for (const [index, url] of imageUrls.slice(0, limit).entries()) {
     if (!url?.trim()) {
       continue;
     }

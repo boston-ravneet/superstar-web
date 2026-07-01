@@ -1,5 +1,5 @@
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -8,23 +8,48 @@ import {
   Text,
   View,
 } from "react-native";
-import { SimulatedVideoAd } from "@/components/ads/SimulatedVideoAd";
-import { BUILD_VIDEO_AD_COUNT } from "@/lib/ads/constants";
+import { RewardedVideoAd } from "@/components/ads/RewardedVideoAd";
 import { useBuildCreationSession } from "@/lib/ads/use-build-creation-session";
+import { useRefineSession } from "@/lib/ads/use-refine-session";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { colors } from "@/constants/theme";
 
 export default function GeneratingScreen() {
   const router = useRouter();
-  const { profileId } = useLocalSearchParams<{ profileId: string }>();
+  const { profileId, mode, prompt } = useLocalSearchParams<{
+    profileId: string;
+    mode?: string;
+    prompt?: string;
+  }>();
   const { sessionToken } = useAuth();
+  const isRefine = mode === "refine";
+  const isEdit = mode === "edit";
 
   const goToPreview = useCallback(() => {
     router.replace({
       pathname: "/onboarding/preview",
-      params: { profileId },
+      params: {
+        profileId,
+        refresh: String(Date.now()),
+      },
     });
   }, [profileId, router]);
+
+  const buildSession = useBuildCreationSession({
+    profileId,
+    sessionToken,
+    enabled: !isRefine,
+    isEdit,
+    onReady: goToPreview,
+  });
+
+  const refineSession = useRefineSession({
+    profileId,
+    prompt,
+    sessionToken,
+    enabled: isRefine,
+    onReady: goToPreview,
+  });
 
   const {
     phase,
@@ -35,63 +60,86 @@ export default function GeneratingScreen() {
     apiDone,
     error,
     completeVideoAd,
-  } = useBuildCreationSession({
-    profileId,
-    sessionToken,
-    onReady: goToPreview,
-  });
+  } = isRefine ? refineSession : buildSession;
+
+  const copy = useMemo(() => {
+    if (isRefine) {
+      return {
+        screenTitle: "Updating your stage",
+        title: "AI is updating your design",
+        body: `Our AI is applying your requested changes right now. Watch ${adTotal} short video${adTotal === 1 ? "" : "s"} to support the free plan.`,
+        aiLabel: "AI update in progress",
+        aiHintDone: "Update complete — finishing your sponsored video…",
+        aiHintWorking: "This usually takes about a minute on our servers.",
+        betweenIntro: "Getting started…",
+        betweenWorking: "AI still working…",
+        betweenBodyEmpty: "Your design tweak is being generated in the background.",
+        finishing: "Returning to your preview…",
+      };
+    }
+
+    return {
+      screenTitle: isEdit ? "Updating your stage" : "Building your stage",
+      title: isEdit ? "AI is rebuilding your profile" : "AI is building your profile",
+      body: `Our AI is reading your bio, studying your photos, and designing your public page right now. Watch ${adTotal} short video${adTotal === 1 ? "" : "s"} to support the free plan.`,
+      aiLabel: "AI design in progress",
+      aiHintDone: "Design complete — finishing your sponsored videos…",
+      aiHintWorking: "This usually takes about 90 seconds on our servers.",
+      betweenIntro: "Getting started…",
+      betweenWorking: "AI still working…",
+      betweenBodyEmpty: "Your custom stage is being generated in the background.",
+      finishing: "Opening your preview…",
+    };
+  }, [adTotal, isEdit, isRefine]);
 
   return (
     <>
-      <Stack.Screen options={{ title: "Building your stage", headerBackVisible: false }} />
+      <Stack.Screen
+        options={{ title: copy.screenTitle, headerBackVisible: false }}
+      />
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.eyebrow}>FREE TIER</Text>
-        <Text style={styles.title}>AI is building your profile</Text>
-        <Text style={styles.body}>
-          Our AI is reading your bio, studying your photos, and designing your
-          public page right now. Watch {BUILD_VIDEO_AD_COUNT} short videos to
-          support the free plan.
-        </Text>
+        <Text style={styles.title}>{copy.title}</Text>
+        <Text style={styles.body}>{copy.body}</Text>
 
         <View style={styles.aiCard}>
           <View style={styles.aiHeader}>
-            <ActivityIndicator color={colors.fuchsia} size="small" />
-            <Text style={styles.aiLabel}>AI design in progress</Text>
+            <ActivityIndicator color={colors.primary} size="small" />
+            <Text style={styles.aiLabel}>{copy.aiLabel}</Text>
           </View>
           <Text style={styles.aiMessage}>{aiMessage}</Text>
           <Text style={styles.aiHint}>
-            {apiDone
-              ? "Design complete — finishing your sponsored videos…"
-              : "This usually takes about 90 seconds on our servers."}
+            {apiDone ? copy.aiHintDone : copy.aiHintWorking}
           </Text>
         </View>
 
         {phase === "video-ad" ? (
-          <SimulatedVideoAd
+          <RewardedVideoAd
+            key={`video-ad-${adIndex}`}
             slot={adIndex + 1}
             total={adTotal}
             active
-            onComplete={() => completeVideoAd("completed")}
+            onComplete={completeVideoAd}
           />
         ) : null}
 
         {phase === "intro" || phase === "ai-working" ? (
           <View style={styles.betweenAdsCard}>
             <Text style={styles.betweenAdsTitle}>
-              {phase === "intro" ? "Getting started…" : "AI still working…"}
+              {phase === "intro" ? copy.betweenIntro : copy.betweenWorking}
             </Text>
             <Text style={styles.betweenAdsBody}>
               {adsCompleted > 0
                 ? `${adsCompleted} of ${adTotal} videos complete. Next video starting…`
-                : "Your custom stage is being generated in the background."}
+                : copy.betweenBodyEmpty}
             </Text>
           </View>
         ) : null}
 
         {phase === "finishing" ? (
           <View style={styles.progressCard}>
-            <ActivityIndicator color={colors.fuchsia} />
-            <Text style={styles.progressText}>Opening your preview…</Text>
+            <ActivityIndicator color={colors.primary} />
+            <Text style={styles.progressText}>{copy.finishing}</Text>
           </View>
         ) : null}
 
@@ -115,7 +163,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   eyebrow: {
-    color: colors.cyan,
+    color: colors.muted,
     letterSpacing: 2,
     fontSize: 12,
     fontWeight: "700",
@@ -135,8 +183,8 @@ const styles = StyleSheet.create({
   },
   aiCard: {
     borderWidth: 1,
-    borderColor: `${colors.fuchsia}55`,
-    backgroundColor: `${colors.fuchsia}12`,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
     borderRadius: 18,
     padding: 16,
     marginBottom: 20,
@@ -198,7 +246,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   retryText: {
-    color: colors.cyan,
+    color: colors.text,
     fontWeight: "600",
+    textDecorationLine: "underline",
   },
 });

@@ -1,4 +1,5 @@
 const INTEREST_PATTERNS: Array<{ pattern: RegExp; tag: string }> = [
+  { pattern: /\b(developer|engineer|architect|javascript|typescript|react|angular|frontend|front-end|software)\b/i, tag: "Front-End Dev" },
   { pattern: /\bfootball\b|\bsoccer\b|\bquarterback\b|\bathlete\b/i, tag: "Football" },
   {
     pattern: /\bmobile phones?\b|\bsmartphones?\b|\bplay(?:ing)? on phone\b|\bphone games?\b/i,

@@ -192,8 +192,8 @@ export const STAGE_ARCHETYPES: StageArchetype[] = [
         lineHeight: 1.65,
       },
       assets: {
-        avatarBorderRadius: "50%",
-        galleryImageBorderRadius: "50%",
+        avatarBorderRadius: "32px",
+        galleryImageBorderRadius: "20px",
       },
       sections: [
         sharedSections.hero(

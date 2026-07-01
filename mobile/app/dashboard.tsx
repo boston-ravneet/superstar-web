@@ -54,7 +54,7 @@ export default function DashboardScreen() {
   if (isBootstrapping) {
     return (
       <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator color={colors.fuchsia} />
+        <ActivityIndicator color={colors.primary} />
       </View>
     );
   }
@@ -113,7 +113,7 @@ export default function DashboardScreen() {
           <RefreshControl
             refreshing={isRefreshingProfiles}
             onRefresh={refreshProfiles}
-            tintColor={colors.fuchsia}
+            tintColor={colors.primary}
           />
         }
         ListEmptyComponent={
@@ -164,6 +164,10 @@ export default function DashboardScreen() {
 
       <Link href="/check-handle" style={styles.secondaryLink}>
         <Text style={styles.secondaryLinkText}>Check handle availability</Text>
+      </Link>
+
+      <Link href="/account-settings" style={styles.secondaryLink}>
+        <Text style={styles.secondaryLinkText}>Account settings</Text>
       </Link>
 
       <Pressable style={styles.signOutButton} onPress={handleSignOut}>
@@ -233,14 +237,14 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   statusBadge: {
-    color: colors.cyan,
+    color: colors.accent,
     fontSize: 11,
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   handle: {
-    color: colors.fuchsia,
+    color: colors.text,
     fontWeight: "800",
     fontSize: 18,
   },
@@ -255,7 +259,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   analyticsText: {
-    color: colors.cyan,
+    color: colors.accent,
     fontSize: 12,
     fontWeight: "600",
     marginBottom: 12,
@@ -272,14 +276,14 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   primaryButton: {
-    backgroundColor: colors.fuchsia,
+    backgroundColor: colors.primary,
     borderRadius: 999,
     paddingVertical: 14,
     alignItems: "center",
     marginBottom: 12,
   },
   primaryButtonText: {
-    color: colors.text,
+    color: colors.onPrimary,
     fontWeight: "700",
     fontSize: 16,
   },
@@ -288,8 +292,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   secondaryLinkText: {
-    color: colors.cyan,
+    color: colors.text,
     fontWeight: "600",
+    textDecorationLine: "underline",
   },
   signOutButton: {
     alignItems: "center",

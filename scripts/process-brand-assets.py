@@ -48,6 +48,25 @@ def export_icon(star_path: str, out_path: str, size: int) -> None:
     print(f"OK {out_path} ({size}px)")
 
 
+def export_app_store_icon(star_path: str, out_path: str, size: int = 1024) -> None:
+    """iOS/Android store icon — gold star on white, no transparency."""
+    star = Image.open(star_path).convert("RGBA")
+    padding_ratio = 0.12
+    inner = int(size * (1 - 2 * padding_ratio))
+    star_resized = star.resize((inner, inner), Image.Resampling.LANCZOS)
+    canvas = Image.new("RGB", (size, size), (255, 255, 255))
+    offset = ((size - inner) // 2, (size - inner) // 2)
+    canvas.paste(star_resized, offset, star_resized)
+    canvas.save(out_path, "PNG")
+    print(f"OK {out_path} ({size}px, white bg)")
+
+
+def export_favicon(star_path: str, out_path: str) -> None:
+    star = Image.open(star_path).convert("RGBA")
+    star.resize((32, 32), Image.Resampling.LANCZOS).save(out_path, format="ICO")
+    print(f"OK {out_path} (32px)")
+
+
 if __name__ == "__main__":
     assets = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "..", "assets")
     os.makedirs(BRAND, exist_ok=True)
@@ -64,7 +83,8 @@ if __name__ == "__main__":
     if os.path.isfile(star):
         export_icon(star, os.path.join(ROOT, "app", "icon.png"), 512)
         export_icon(star, os.path.join(ROOT, "app", "apple-icon.png"), 512)
+        export_favicon(star, os.path.join(ROOT, "app", "favicon.ico"))
         mobile = os.path.join(ROOT, "mobile", "assets")
         os.makedirs(mobile, exist_ok=True)
-        export_icon(star, os.path.join(mobile, "icon.png"), 1024)
-        export_icon(star, os.path.join(mobile, "adaptive-icon.png"), 1024)
+        export_app_store_icon(star, os.path.join(mobile, "icon.png"), 1024)
+        export_app_store_icon(star, os.path.join(mobile, "adaptive-icon.png"), 1024)

@@ -13,7 +13,7 @@ import {
   View,
 } from "react-native";
 import { checkUsername } from "@/lib/api/client";
-import { patchOnboardingState } from "@/lib/state/onboarding";
+import { patchOnboardingState, resetOnboardingState } from "@/lib/state/onboarding";
 import type { UsernameCheckResult } from "@/types/profile";
 import { colors } from "@/constants/theme";
 
@@ -69,9 +69,28 @@ export default function UsernameScreen() {
     router.push("/onboarding/build");
   }
 
+  function handleGoBack() {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+    resetOnboardingState();
+    router.replace("/dashboard");
+  }
+
   return (
     <>
-      <Stack.Screen options={{ title: "Choose handle" }} />
+      <Stack.Screen
+        options={{
+          title: "Choose handle",
+          headerBackVisible: false,
+          headerLeft: () => (
+            <Pressable onPress={handleGoBack} hitSlop={12} style={styles.headerButton}>
+              <Text style={styles.headerButtonText}>Cancel</Text>
+            </Pressable>
+          ),
+        }}
+      />
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -94,7 +113,11 @@ export default function UsernameScreen() {
             placeholder="@yourname"
             placeholderTextColor={colors.muted}
             value={username}
-            onChangeText={setUsername}
+            onChangeText={(text) => {
+              setUsername(text);
+              setResult(null);
+              setError(null);
+            }}
             returnKeyType="done"
             blurOnSubmit
             onSubmitEditing={handleCheck}
@@ -103,7 +126,7 @@ export default function UsernameScreen() {
 
           <Pressable style={styles.primaryButton} onPress={handleCheck}>
             {loading ? (
-              <ActivityIndicator color={colors.text} />
+              <ActivityIndicator color={colors.onPrimary} />
             ) : (
               <Text style={styles.primaryButtonText}>Check availability</Text>
             )}
@@ -122,6 +145,17 @@ export default function UsernameScreen() {
                     ? "This handle is available for registration."
                     : "This handle is unavailable.")}
               </Text>
+              <Pressable
+                style={styles.tryAnotherButton}
+                onPress={() => {
+                  setResult(null);
+                  setError(null);
+                  setUsername("");
+                  inputRef.current?.focus();
+                }}
+              >
+                <Text style={styles.tryAnotherButtonText}>Try another handle</Text>
+              </Pressable>
             </View>
           ) : null}
 
@@ -142,6 +176,15 @@ export default function UsernameScreen() {
 }
 
 const styles = StyleSheet.create({
+  headerButton: {
+    paddingHorizontal: 4,
+    paddingVertical: 6,
+  },
+  headerButtonText: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: "400",
+  },
   flex: {
     flex: 1,
   },
@@ -175,14 +218,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   primaryButton: {
-    backgroundColor: colors.fuchsia,
+    backgroundColor: colors.primary,
     borderRadius: 999,
     paddingVertical: 14,
     alignItems: "center",
     marginBottom: 16,
   },
   primaryButtonText: {
-    color: colors.text,
+    color: colors.onPrimary,
     fontWeight: "700",
   },
   secondaryButton: {
@@ -220,5 +263,14 @@ const styles = StyleSheet.create({
   resultBody: {
     color: colors.muted,
     lineHeight: 20,
+  },
+  tryAnotherButton: {
+    marginTop: 14,
+    alignSelf: "flex-start",
+  },
+  tryAnotherButtonText: {
+    color: colors.text,
+    fontWeight: "600",
+    textDecorationLine: "underline",
   },
 });

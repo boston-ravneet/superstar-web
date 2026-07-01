@@ -3,6 +3,8 @@ import { SuperstarLogoLink } from "@/components/brand/SuperstarLogo";
 const FOOTER_LINKS = [
   { label: "About", href: "#about" },
   { label: "Claim a handle", href: "#claim" },
+  { label: "Terms", href: "/terms" },
+  { label: "Privacy", href: "/privacy" },
 ];
 
 export function LandingFooter() {

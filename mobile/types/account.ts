@@ -5,6 +5,9 @@ export interface AccountPublicView {
   email: string | null;
   displayName: string | null;
   authProvider: AccountAuthProvider;
+  termsAcceptedAt: string | null;
+  termsVersion: string | null;
+  requiresTermsAcceptance: boolean;
 }
 
 export interface AccountAuthResponse {

@@ -1,12 +1,13 @@
 {
   "expo": {
-    "name": "Superstar Mobile",
+    "name": "Superstar",
     "slug": "superstar-mobile",
-    "version": "1.0.0",
+    "version": "1.0.1",
+    "description": "Build and publish your personal stage at getsuperstar.info — bio, photos, showreel, and social links in minutes.",
     "icon": "./assets/icon.png",
     "orientation": "portrait",
     "scheme": "superstar",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/icon.png",
@@ -14,12 +15,14 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": false,
+      "supportsTablet": true,
       "bundleIdentifier": "info.getsuperstar.mobile",
       "buildNumber": "1",
       "usesAppleSignIn": true,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "CFBundleDisplayName": "Superstar",
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryUsageDescription": "Allow Superstar to access your photos so you can add a headshot and portfolio images to your public page."
       }
     },
     "android": {
@@ -28,9 +31,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "info.getsuperstar.mobile",
-      "permissions": [
-        "android.permission.RECORD_AUDIO"
-      ]
+      "permissions": []
     },
     "plugins": [
       "expo-router",

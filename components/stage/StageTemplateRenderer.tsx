@@ -1,5 +1,6 @@
 "use client";
 
+import "./stage-template.css";
 import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import type {
   StageTemplateDocument,
@@ -26,7 +27,24 @@ const COLLAPSIBLE_SECTION_TYPES = new Set([
   "quote",
 ]);
 
-const ACCORDION_THRESHOLD = 3;
+/** Keep sections visible — accordions hid bio/skills on many profiles. */
+const ACCORDION_THRESHOLD = 999;
+
+/** 50% radius on wide images renders as ovals; only use circles on square thumbs. */
+function resolveGalleryBorderRadius(
+  radius: string,
+  layout: "carousel" | "grid" | "circle-thumbs",
+): string {
+  if (layout === "circle-thumbs") {
+    return "50%";
+  }
+
+  if (radius === "50%") {
+    return "20px";
+  }
+
+  return radius;
+}
 
 function sectionStyle(
   section: StageTemplateSection,
@@ -137,6 +155,7 @@ function HeroSection({
 
   const textBlock = (
     <div
+      className="stage-hero-text"
       style={{
         display: "flex",
         flexDirection: "column",
@@ -187,11 +206,15 @@ function HeroSection({
   );
 
   return (
-    <div style={sectionStyle(section, palette)}>
+    <div
+      className={isRow ? undefined : "stage-hero-section"}
+      style={sectionStyle(section, palette)}
+    >
       {avatarUrl ? (
         onImageClick ? (
           <button
             type="button"
+            className="stage-hero-avatar"
             aria-label={`View ${headline} profile photo`}
             onClick={() => onImageClick(avatarUrl, headline)}
             style={{
@@ -217,6 +240,7 @@ function HeroSection({
           </button>
         ) : (
           <img
+            className="stage-hero-avatar"
             src={avatarUrl}
             alt={headline}
             style={{
@@ -259,7 +283,7 @@ function ShowreelSection({
   }
 
   return (
-    <div style={{ padding: compact ? "0 16px 16px" : "0 24px 24px" }}>
+    <div className="stage-showreel-wrap" style={{ padding: compact ? "0 16px 16px" : "0 24px 24px" }}>
       {!compact ? (
         <h2 style={{ color: palette.text, marginBottom: 16 }}>{title}</h2>
       ) : null}
@@ -340,6 +364,11 @@ function GallerySection({
     : [];
   const isCircular = galleryImageBorderRadius === "50%";
   const useCarousel = images.length > 3;
+  const carouselRadius = resolveGalleryBorderRadius(
+    galleryImageBorderRadius,
+    "carousel",
+  );
+  const gridRadius = resolveGalleryBorderRadius(galleryImageBorderRadius, "grid");
 
   function renderImage(image: { url?: string; caption?: string }, index: number) {
     if (!image.url) {
@@ -380,11 +409,15 @@ function GallerySection({
     return (
       <div style={{ padding: compact ? "0 0 16px" : "0 0 24px" }}>
         {!compact ? (
-          <h2 style={{ color: palette.text, padding: "0 24px", marginBottom: 12 }}>
+          <h2
+            className="stage-section-heading"
+            style={{ color: palette.text, padding: "0 24px", marginBottom: 12 }}
+          >
             {title}
           </h2>
         ) : null}
         <div
+          className="stage-gallery-track"
           style={{
             display: "flex",
             gap: 14,
@@ -399,17 +432,18 @@ function GallerySection({
             image.url ? (
               <figure
                 key={`${image.url}-${index}`}
+                className="stage-gallery-slide"
                 style={{
                   flex: "0 0 78%",
                   maxWidth: 420,
                   scrollSnapAlign: "start",
                   margin: 0,
                   overflow: "hidden",
-                  borderRadius: galleryImageBorderRadius,
+                  borderRadius: carouselRadius,
                   border: `1px solid ${palette.border}`,
                 }}
               >
-                <div style={{ height: 240, overflow: "hidden" }}>
+                <div className="stage-gallery-media" style={{ height: 240, overflow: "hidden" }}>
                   {renderImage(image, index)}
                 </div>
                 {image.caption ? (
@@ -473,11 +507,14 @@ function GallerySection({
   return (
     <div>
       {!compact ? (
-        <h2 style={{ color: palette.text, padding: "0 24px", marginBottom: 12 }}>
+        <h2
+          className="stage-section-heading"
+          style={{ color: palette.text, padding: "0 24px", marginBottom: 12 }}
+        >
           {title}
         </h2>
       ) : null}
-      <div style={sectionStyle(section, palette)}>
+      <div className="stage-gallery-grid" style={sectionStyle(section, palette)}>
         {images.map((image, index) =>
           image.url ? (
             <figure
@@ -486,11 +523,11 @@ function GallerySection({
                 gridColumn: image.span === 2 ? "span 2 / span 2" : undefined,
                 margin: 0,
                 overflow: "hidden",
-                borderRadius: galleryImageBorderRadius,
+                borderRadius: gridRadius,
                 border: `1px solid ${palette.border}`,
               }}
             >
-              <div style={{ height: 220, overflow: "hidden" }}>
+              <div className="stage-gallery-media" style={{ height: 220, overflow: "hidden" }}>
                 {renderImage(image, index)}
               </div>
               {image.caption ? (
@@ -525,7 +562,7 @@ function BioSection({
   compact?: boolean;
 }) {
   return (
-    <div style={{ padding: compact ? "0 16px 16px" : "0 24px 8px" }}>
+    <div className="stage-bio-card" style={{ padding: compact ? "0 16px 16px" : "0 24px 8px" }}>
       <div
         style={{
           ...sectionStyle(section, palette),
@@ -613,7 +650,7 @@ function SkillsSection({
     : [];
 
   return (
-    <div style={{ padding: compact ? "0 16px 16px" : "0 24px 24px" }}>
+    <div className="stage-skills-wrap" style={{ padding: compact ? "0 16px 16px" : "0 24px 24px" }}>
       {!compact ? (
         <h2
           style={{
@@ -747,6 +784,7 @@ function CtaSection({
         {fallbackLabel}
       </p>
       <div
+        className="stage-cta-row"
         style={{
           display: "flex",
           flexWrap: "wrap",
@@ -1151,6 +1189,7 @@ export function StageTemplateRenderer({
 
   return (
     <div
+      className="stage-template-shell"
       style={{
         position: "relative",
         minHeight: template.canvas.minHeight,
@@ -1199,7 +1238,10 @@ export function StageTemplateRenderer({
         </div>
       ) : null}
 
-      <div style={{ position: "relative", zIndex: 1, maxWidth: template.canvas.maxWidth, margin: "0 auto" }}>
+      <div
+        className="stage-template-inner"
+        style={{ position: "relative", zIndex: 1, margin: "0 auto" }}
+      >
         {visibleSections.map((section) => {
           const inAccordion =
             useAccordions && COLLAPSIBLE_SECTION_TYPES.has(section.type);

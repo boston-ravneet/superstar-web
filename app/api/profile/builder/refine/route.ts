@@ -2,7 +2,9 @@ import {
   requireBuilderAuth,
   requireProfileOwnership,
 } from "@/lib/api/builder-auth";
+import { requireAcceptedTerms } from "@/lib/api/require-terms";
 import { jsonError, jsonOk } from "@/lib/api/response";
+import { ContentModerationError } from "@/lib/ai/moderate-upload-images";
 import {
   getBuilderProfile,
   runTemplateGeneration,
@@ -16,6 +18,11 @@ export async function POST(request: Request) {
     const auth = await requireBuilderAuth(request);
     if (auth instanceof Response) {
       return auth;
+    }
+
+    const termsBlocked = await requireAcceptedTerms(auth.bindings.DB, auth.accountId);
+    if (termsBlocked) {
+      return termsBlocked;
     }
 
     const payload = (await request.json()) as BuilderRefinePayload;
@@ -56,6 +63,9 @@ export async function POST(request: Request) {
       template: generation.template,
     });
   } catch (error) {
+    if (error instanceof ContentModerationError) {
+      return jsonError(error.message, error.code, 422);
+    }
     const message =
       error instanceof Error ? error.message : "Unable to refine your stage.";
     return jsonError(message, "BUILDER_REFINE_FAILED", 500);

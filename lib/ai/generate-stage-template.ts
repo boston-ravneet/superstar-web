@@ -51,6 +51,7 @@ Each creator's page should feel unique — a comedian and a doctor should never 
 | Fashion / model | The Lookbook · Runway | About | Style & Focus |
 | Creator / streamer | Behind the Content · Clips | My Story | Focus Areas |
 | Student | Campus Days · Life & Moments | About Me | Interests |
+| Developer / engineer | In the codebase · Projects | Professional Profile | Stack & Strengths |
 | Sales / business pro | At Work · In the Field | About | Core Strengths |
 
 If the photos show something specific (sports field, clinic, kitchen, stage), let that guide \`gallery.title\`.`;
@@ -62,7 +63,7 @@ const STAGE_TEMPLATE_SCHEMA = `{
   "canvas": { "maxWidth": "720px", "minHeight": "100vh", "backgroundType": "solid|gradient", "background": "#hex", "backgroundGradientTo": "#hex", "padding": "0", "motif": "none|film-grain|spotlight|sky-earth|soft-bokeh|stage-lights|tech-grid|sport-stripe|warm-glow" },
   "palette": { "primary": "#hex", "secondary": "#hex", "accent": "#hex", "text": "#hex", "muted": "#hex", "surface": "#hex", "border": "#hex" },
   "typography": { "headingFont": "system-ui, sans-serif", "bodyFont": "system-ui, sans-serif", "headingWeight": 800, "bodyWeight": 400, "headingSize": "2.5rem", "bodySize": "1rem", "lineHeight": 1.6 },
-  "assets": { "avatarBorderRadius": "50%|24px|20px|0", "galleryImageBorderRadius": "50%|24px|20px|0" },
+  "assets": { "avatarBorderRadius": "50%|24px|20px|0", "galleryImageBorderRadius": "24px|20px|16px|0" },
   "sections": [Section]
 }
 
@@ -73,6 +74,7 @@ Section types and content:
 - gallery: { title: "persona-specific photo section name YOU invent", images: [{ url, caption?, span: 1 }] }
 - bio: { title: "persona-specific bio section name YOU invent", text }
 - skills: { title: "persona-specific skills section name YOU invent", tags: string[] }
+- highlights: { title: "Experience|Education|…", items: [{ title, body }] }
 - quote: { text, author? }
 - cta: { label, href }`;
 
@@ -187,6 +189,7 @@ ${SECTION_TITLE_GUIDANCE}
    - Never paste the design brief or tweak text into visible copy.
 
 5. **Design the visual system** — Palette, gradients, and section styling must reflect bio themes + design brief + photo colors when you can see them.
+   - **READABILITY IS REQUIRED:** \`palette.text\` and \`palette.muted\` MUST contrast with \`canvas.background\` (WCAG-friendly). On dark/green/navy backgrounds use light text (#f8fafc) and light muted (#e2e8f0). On light backgrounds use dark text (#0f172a) and slate muted (#475569). Never put dark grey muted text on a dark green background.
    - Pick \`palette\` colors that match the person's world (e.g. warm golds for actor headshots, clinic blues for doctor, field greens for athlete).
    - Set \`canvas.background\` / \`backgroundGradientTo\` to a gradient that fits their vibe — not generic gray.
    - Set \`canvas.motif\` for a CSS decorative overlay (never visible text):
@@ -204,13 +207,24 @@ ${SECTION_TITLE_GUIDANCE}
    - If brief mentions sky + green / nature / earth / two colors for sky and ground → canvas gradient sky blue (#e0f2fe) fading to soft green (#dcfce7); primary sky blue (#0ea5e9), secondary earth green (#22c55e).
    - Sports + bright → light blue/sky background (#f0f9ff), green or blue accents.
 
-6. **Structure sections** — Keep the archetype's section order and types. Include: hero → social (if links) → showreel (if video links provided) → gallery (portfolio photo URLs only — NOT the headshot) → bio → skills (3–6 tags from bio interests) → cta.
+6. **Structure sections** — Keep the archetype's section order and types. Include: hero → social (if links) → showreel (if video links) → gallery (portfolio photos only) → bio (short summary) → highlights (if résumé-style bio with jobs/education — see below) → skills → cta.
 
-7. **Images & video** — Hero \`avatarUrl\` = headshot URL only. Gallery uses portfolio URLs (4–6 images). Showreel section uses provided YouTube/Vimeo/TikTok links with parsed \`embedUrl\` and \`provider\`; hide showreel when no links.
-   - Circular/round request: \`assets.avatarBorderRadius\` and \`assets.galleryImageBorderRadius\` = "50%", all gallery \`span\` = 1, omit \`caption\` on gallery images (no "Photo 2" labels).
-   - Rounded corners: use "20px" or "24px".
+   **Rich / résumé bios (long bio with jobs, education, or technical skills lists):**
+   - \`bio.text\`: 2–4 sentence summary ONLY — do not paste the entire résumé.
+   - Add a \`highlights\` section titled "Experience" with 3–6 items: each \`{ title: "Role — Company", body: "dates" }\` from Work Experience facts in the bio.
+   - Add another \`highlights\` section titled "Education" if degrees are listed.
+   - \`skills.tags\`: pull real technologies from Technical Skills (HTML, JavaScript, AngularJS, etc.) — up to 10 tags.
+   - Never invent employers, dates, or degrees not present in the raw bio.
 
-8. **Gallery rules** — No generic captions ("Photo 1", "Featured"). Either omit caption or write a short meaningful label tied to the image content.
+7. **CTA section** — \`cta.label\` is the section HEADING above the buttons (not a button label).
+   - Mixed contact buttons (YouTube + Website + Email + Phone) → heading MUST be "Get in touch" — NEVER "Watch on YouTube".
+   - YouTube-only → "Watch on YouTube". Instagram-only → "Message on Instagram".
+
+8. **Images & video** — Hero \`avatarUrl\` = headshot URL only. Gallery uses portfolio URLs (4–6 images). Showreel uses provided video links.
+   - Default gallery corners: \`assets.galleryImageBorderRadius\` = "20px" (NOT "50%" unless user explicitly asks for round/circular photos).
+   - Circular request only: "50%" on avatar; gallery stays "20px" unless small circle thumbnails are requested.
+
+9. **Gallery rules** — No generic captions ("Photo 1", "Featured"). Either omit caption or write a short meaningful label tied to the image content.
 
 ## OUTPUT
 

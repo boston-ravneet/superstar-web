@@ -8,11 +8,13 @@ Check off items as you ship them.
 
 ## 0. Build & ship (do first)
 
-- [ ] Confirm EAS free tier quota reset in [expo.dev](https://expo.dev) dashboard
-- [ ] Bump `ios.buildNumber` in `app.json` before production build
-- [ ] Run `eas build --platform ios --profile production`
+- [x] EAS credits available — no need to wait for July 1 reset
+- [x] iOS submitted to App Store Connect (June 2026)
+- [x] Android production AAB built (versionCode 4) — internal testing not submitted yet
+- [ ] Bump `ios.buildNumber` in `app.json` before next production iOS build
+- [ ] Run `eas build --platform ios --profile production` (after credits reset)
 - [ ] Run `eas submit --platform ios` (or submit via App Store Connect)
-- [ ] Optional: `eas build --platform android --profile production`
+- [ ] Run `eas submit --platform android` after Play Console + service account setup
 - [ ] Smoke-test on **physical device** (not Expo Go) against `https://getsuperstar.info`
 
 **Env vars already in `eas.json`:** `EXPO_PUBLIC_API_URL`, Google OAuth IDs. Verify `.env` locally matches for dev.
@@ -40,13 +42,13 @@ Check off items as you ship them.
 
 **Edit / rebuild (same screen, fewer ads):**
 
-- [ ] Read `mode=edit` from route params in `generating.tsx` (already passed from `build.tsx`)
-- [ ] Add `EDIT_VIDEO_AD_COUNT = 2` in `lib/ads/constants.ts`
-- [ ] Use 2 ads for edit, 3 for create in `use-build-creation-session.ts`
+- [x] Read `mode=edit` from route params in `generating.tsx` (passed from `build.tsx`)
+- [x] Add `EDIT_VIDEO_AD_COUNT = 2` in `lib/ads/constants.ts`
+- [x] Use 2 ads for edit, 3 for create in `use-build-creation-session.ts`
 
 **Optional — refine from preview:**
 
-- [ ] Route `preview.tsx` refine flow through ad gate (1 video before `refineProfileBuilder`) or a mini generating overlay
+- [x] Route `preview.tsx` refine flow through ad gate (1 video before `refineProfileBuilder`) via `use-refine-session.ts`
 
 ---
 
@@ -72,15 +74,15 @@ Check off items as you ship them.
 
 ## 3. Features already in JS — verify on new build
 
-These shipped in code but **current TestFlight build may not include them**:
+These shipped in code but **need a new EAS build** to reach TestFlight / Play testers:
 
-- [ ] **Style picker** on build screen (`preferredArchetypeId` — Field Day, Midnight Creator, etc.)
-- [ ] **Design instructions** field (private styling notes for AI)
-- [ ] **3-video + AI progress** generating screen (replaces old “5 minute” copy)
-- [ ] **Dashboard view counts** (`totalViews`, `viewsLast7Days` on published profiles)
-- [ ] **Preview analytics** line + refine + bio toggle
-- [ ] **Edit stage** flow from dashboard → build → generating → preview
-- [ ] **Social connect screen** still uses **mock OAuth** — replace with §4 handle fields + optional Verify
+- [x] **Style picker** on build screen (`preferredArchetypeId` — Field Day, Midnight Creator, etc.)
+- [x] **Design instructions** field (private styling notes for AI)
+- [x] **3-video + AI progress** generating screen (replaces old “5 minute” copy)
+- [x] **Dashboard view counts** (`totalViews`, `viewsLast7Days` on published profiles)
+- [x] **Preview analytics** line + refine + bio toggle
+- [x] **Edit stage** flow from dashboard → build → generating → preview (edit = 2 ads)
+- [x] **Social handle fields** on build screen — mock `oauth.tsx` retired (redirects to build)
 
 ---
 
@@ -95,9 +97,26 @@ These shipped in code but **current TestFlight build may not include them**:
 
 No OAuth required to sign up or publish. Verification is optional but visible to visitors.
 
-**Today:** Onboarding forces mock Instagram/TikTok on `oauth.tsx`. Stage only renders IG + TikTok from legacy columns. Replace this flow.
+**Today:** ~~Onboarding forces mock Instagram/TikTok on `oauth.tsx`.~~ Handle fields on build screen; `oauth.tsx` redirects to build.
 
-### Target data shape (`social_links_json` or migration)
+### Phase A — Handle fields + display (no OAuth yet)
+
+**Mobile:**
+
+- [x] **Social links** section on build/edit screen (`SocialHandleFields.tsx`)
+- [x] One row per platform: label + text input + Verify button (shows “coming soon” until Phase B)
+- [x] Platforms v1: Instagram, TikTok, YouTube, X, LinkedIn, website, email, phone
+- [x] Save handles with profile via builder submit (`socialAccounts` in payload)
+- [x] Load saved handles when editing from dashboard (`load-edit.ts`)
+- [x] **Remove or skip** mandatory `oauth.tsx` mock step (redirect only)
+
+**Server + stage (web can ship before new mobile build):**
+
+- [x] Validate + normalize handles (`lib/stage/social-accounts.ts`)
+- [x] Persist to `social_links_json` (via builder submit)
+- [x] Render **all** filled handles on stage `social` section with platform icons + links
+- [x] Update `resolve-connect-actions.ts` to use saved accounts (not bio parsing only)
+- [x] Unverified handles show normally; verified tick UI ready when Phase B ships
 
 ```json
 {
@@ -124,26 +143,7 @@ No OAuth required to sign up or publish. Verification is optional but visible to
 
 Keep `instagram_handle` / `tiktok_handle` in sync for backwards compat until fully migrated.
 
-### Phase A — Handle fields + display (no OAuth yet)
-
-**Mobile:**
-
-- [ ] New **Social links** section on build/edit screen (or dedicated step after bio)
-- [ ] One row per platform: label + text input + empty Verify button (disabled until Phase B)
-- [ ] Platforms v1: Instagram, TikTok, YouTube, X, LinkedIn, website, email, phone
-- [ ] Save handles with profile via existing builder submit or new `PATCH /api/profile/social-links`
-- [ ] Load saved handles when editing from dashboard
-- [ ] **Remove or skip** mandatory `oauth.tsx` mock step for new users (Apple/Google login stays)
-
-**Server + stage (web can ship before new mobile build):**
-
-- [ ] Validate + normalize handles (strip `@`, lowercase where safe)
-- [ ] Persist to `social_links_json`
-- [ ] Render **all** filled handles on stage `social` section with platform icons + links
-- [ ] Update `resolve-connect-actions.ts` to use saved accounts (not bio parsing only)
-- [ ] Unverified handles show normally; no tick yet
-
-### Phase B — Verify button + verified tick
+### Target data shape (`social_links_json` or migration)
 
 **Mobile (per platform, add one at a time):**
 
@@ -229,10 +229,10 @@ Do on web/Cloudflare when ready — mobile depends on these:
 
 **Social (§4):**
 
-- [ ] `social_links_json` accounts schema + `PATCH /api/profile/social-links`
+- [x] `social_links_json` accounts schema (via builder submit — no separate PATCH yet)
 - [ ] `POST /api/profile/social/verify/{platform}` per platform
-- [ ] Stage renderer: all handles + verified tick
-- [ ] Privacy policy + data deletion URLs (for Meta/TikTok Verify)
+- [x] Stage renderer: all handles + verified tick (tick shows when `verified: true`)
+- [x] Privacy policy + terms URLs live (for future Meta/TikTok Verify)
 
 ---
 
@@ -247,4 +247,4 @@ Do on web/Cloudflare when ready — mobile depends on these:
 
 ---
 
-_Last updated: June 2026 — regenerate EAS build after checking off §1–§4._
+_Last updated: June 24, 2026 — regenerate EAS build after checking off §1–§4._

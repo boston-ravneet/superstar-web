@@ -1,8 +1,13 @@
+import { hasAcceptedCurrentTerms } from "@/lib/legal/terms-version";
 import type {
   AccountAuthProvider,
   AccountPublicView,
   AccountRecord,
 } from "@/lib/types/account";
+
+const ACCOUNT_SELECT =
+  `id, email, display_name, auth_provider, auth_subject,
+   terms_accepted_at, terms_version, created_at, updated_at`;
 
 export function mapAccountRecord(record: AccountRecord): AccountPublicView {
   return {
@@ -10,6 +15,12 @@ export function mapAccountRecord(record: AccountRecord): AccountPublicView {
     email: record.email,
     displayName: record.display_name,
     authProvider: record.auth_provider,
+    termsAcceptedAt: record.terms_accepted_at,
+    termsVersion: record.terms_version,
+    requiresTermsAcceptance: !hasAcceptedCurrentTerms({
+      termsAcceptedAt: record.terms_accepted_at,
+      termsVersion: record.terms_version,
+    }),
   };
 }
 
@@ -20,7 +31,7 @@ export async function findAccountByAuth(
 ): Promise<AccountRecord | null> {
   return db
     .prepare(
-      `SELECT id, email, display_name, auth_provider, auth_subject, created_at, updated_at
+      `SELECT ${ACCOUNT_SELECT}
        FROM accounts
        WHERE auth_provider = ? AND auth_subject = ?
        LIMIT 1`,
@@ -57,10 +68,7 @@ export async function upsertAccount(
       .run();
 
     const updated = await db
-      .prepare(
-        `SELECT id, email, display_name, auth_provider, auth_subject, created_at, updated_at
-         FROM accounts WHERE id = ? LIMIT 1`,
-      )
+      .prepare(`SELECT ${ACCOUNT_SELECT} FROM accounts WHERE id = ? LIMIT 1`)
       .bind(existing.id)
       .first<AccountRecord>();
 
@@ -88,10 +96,7 @@ export async function upsertAccount(
     .run();
 
   const created = await db
-    .prepare(
-      `SELECT id, email, display_name, auth_provider, auth_subject, created_at, updated_at
-       FROM accounts WHERE id = ? LIMIT 1`,
-    )
+    .prepare(`SELECT ${ACCOUNT_SELECT} FROM accounts WHERE id = ? LIMIT 1`)
     .bind(id)
     .first<AccountRecord>();
 
@@ -107,12 +112,33 @@ export async function getAccountById(
   accountId: string,
 ): Promise<AccountRecord | null> {
   return db
-    .prepare(
-      `SELECT id, email, display_name, auth_provider, auth_subject, created_at, updated_at
-       FROM accounts WHERE id = ? LIMIT 1`,
-    )
+    .prepare(`SELECT ${ACCOUNT_SELECT} FROM accounts WHERE id = ? LIMIT 1`)
     .bind(accountId)
     .first<AccountRecord>();
+}
+
+export async function acceptAccountTerms(
+  db: D1Database,
+  accountId: string,
+  termsVersion: string,
+): Promise<AccountRecord> {
+  await db
+    .prepare(
+      `UPDATE accounts
+       SET terms_accepted_at = datetime('now'),
+           terms_version = ?,
+           updated_at = datetime('now')
+       WHERE id = ?`,
+    )
+    .bind(termsVersion, accountId)
+    .run();
+
+  const updated = await getAccountById(db, accountId);
+  if (!updated) {
+    throw new Error("Account not found after accepting terms.");
+  }
+
+  return updated;
 }
 
 export async function listProfilesForAccount(
@@ -163,4 +189,34 @@ export async function profileOwnedByAccount(
     .first<{ id: string }>();
 
   return Boolean(row);
+}
+
+export async function deleteAccountAndData(
+  db: D1Database,
+  accountId: string,
+): Promise<void> {
+  const profiles = await listProfilesForAccount(db, accountId);
+  const profileIds = profiles.map((profile) => profile.id);
+
+  if (profileIds.length > 0) {
+    const placeholders = profileIds.map(() => "?").join(", ");
+    await db
+      .prepare(
+        `DELETE FROM profile_change_logs WHERE profile_id IN (${placeholders})`,
+      )
+      .bind(...profileIds)
+      .run();
+    await db
+      .prepare(
+        `DELETE FROM profile_analytics_daily WHERE profile_id IN (${placeholders})`,
+      )
+      .bind(...profileIds)
+      .run();
+    await db
+      .prepare(`DELETE FROM profiles WHERE account_id = ?`)
+      .bind(accountId)
+      .run();
+  }
+
+  await db.prepare(`DELETE FROM accounts WHERE id = ?`).bind(accountId).run();
 }

@@ -9,6 +9,14 @@ import { templateToLayoutConfig } from "@/lib/stage/template-to-layout";
 import { serializeLayoutConfig, parseLayoutConfig } from "@/lib/stage/parse-layout-config";
 import { generateStageTemplate } from "@/lib/ai/generate-stage-template";
 import type { GenerationResult } from "@/lib/ai/generate-stage-template";
+import {
+  assertUploadImagesAllowed,
+} from "@/lib/ai/moderate-upload-images";
+import {
+  imageUrlsFromMedia,
+  mediaFromLegacyImageUrls,
+  resolveBuilderMedia,
+} from "@/lib/stage/builder-media";
 import { normalizeBuilderInput } from "@/lib/stage/enrich-stage-template";
 import {
   applyBioDisplayMode,
@@ -25,10 +33,6 @@ import {
   normalizeSocialAccounts,
   serializeSocialAccountsPayload,
 } from "@/lib/stage/social-accounts";
-import {
-  imageUrlsFromMedia,
-  mediaFromLegacyImageUrls,
-} from "@/lib/stage/builder-media";
 
 function keepsPublishedLive(status: PublishStatus): boolean {
   return status === "published";
@@ -325,6 +329,9 @@ export async function runTemplateGeneration(
   if (!storedInput) {
     throw new Error("Builder input is missing.");
   }
+
+  const imageUrls = imageUrlsFromMedia(resolveBuilderMedia(storedInput));
+  await assertUploadImagesAllowed(imageUrls, apiKey);
 
   const currentTemplate = refinePrompt
     ? parseStageTemplate(profile.stage_template_json ?? null) ?? undefined

@@ -1,10 +1,22 @@
 import { fetchBuilderStatus } from "@/lib/api/client";
+import type { ArchetypeId } from "@/constants/archetypes";
+import { ARCHETYPE_OPTIONS } from "@/constants/archetypes";
 import { mediaStateFromBuilderInput } from "@/lib/media/build-payload";
 import { draftsFromAccounts } from "@/lib/social/accounts";
 import {
   initialOnboardingState,
   patchOnboardingState,
 } from "@/lib/state/onboarding";
+
+const ARCHETYPE_IDS = new Set<ArchetypeId>(
+  ARCHETYPE_OPTIONS.map((option) => option.id),
+);
+
+function parsePreferredArchetypeId(value: unknown): ArchetypeId | null {
+  return typeof value === "string" && ARCHETYPE_IDS.has(value as ArchetypeId)
+    ? (value as ArchetypeId)
+    : null;
+}
 
 export async function loadProfileForEdit(
   profileId: string,
@@ -31,6 +43,7 @@ export async function loadProfileForEdit(
       (input as { extraDetails?: string }).extraDetails ??
       "",
     socialHandleDrafts: draftsFromAccounts(input.socialAccounts ?? []),
+    preferredArchetypeId: parsePreferredArchetypeId(input.preferredArchetypeId),
     oauth: null,
     ...mediaState,
   });

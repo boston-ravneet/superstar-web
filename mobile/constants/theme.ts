@@ -1,12 +1,15 @@
+/** App chrome — matches the light marketing site (neutral palette, black CTAs). */
 export const colors = {
-  background: "#050505",
-  surface: "#111111",
-  border: "#27272a",
-  text: "#fafafa",
-  muted: "#a1a1aa",
-  fuchsia: "#d946ef",
-  purple: "#9333ea",
-  cyan: "#22d3ee",
-  danger: "#f87171",
-  success: "#4ade80",
+  background: "#ffffff",
+  surface: "#fafafa",
+  border: "#e5e5e5",
+  text: "#171717",
+  muted: "#737373",
+  primary: "#171717",
+  onPrimary: "#ffffff",
+  /** Secondary text links and subtle accents */
+  accent: "#525252",
+  danger: "#dc2626",
+  success: "#16a34a",
+  overlay: "rgba(0,0,0,0.55)",
 };
